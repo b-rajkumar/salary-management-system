@@ -1,10 +1,36 @@
-import { sql, type Kysely } from 'kysely';
+import { sql, type Kysely, type ExpressionBuilder } from 'kysely';
 import type { DB } from '../db/types';
 import { ConflictError } from '../lib/errors';
-import type { Employee, EmployeeCreateInput, EmployeesListResponse } from '@app/shared';
+import {
+  COUNTRIES,
+  type Employee,
+  type EmployeeCreateInput,
+  type EmployeesListResponse,
+} from '@app/shared';
 
 const isUniqueEmailViolation = (err: unknown): boolean =>
   err instanceof Error && /UNIQUE constraint failed: employees\.email/i.test(err.message);
+
+function countryCodesMatching(qLower: string): string[] {
+  return Object.entries(COUNTRIES)
+    .filter(([, entry]) => entry.name.toLowerCase().includes(qLower))
+    .map(([code]) => code);
+}
+
+function searchPredicate(eb: ExpressionBuilder<DB, 'employees'>, q: string) {
+  const qLower = q.toLowerCase();
+  const pattern = `%${qLower}%`;
+  const codeMatches = countryCodesMatching(qLower);
+
+  const textColumnLikes = (
+    ['firstName', 'lastName', 'email', 'jobTitle', 'department', 'country'] as const
+  ).map((col) => eb(sql<string>`LOWER(${sql.ref(col)})`, 'like', pattern));
+
+  return eb.or([
+    ...textColumnLikes,
+    ...(codeMatches.length > 0 ? [eb('country', 'in', codeMatches)] : []),
+  ]);
+}
 
 export class EmployeesRepository {
   constructor(private readonly db: Kysely<DB>) {}
@@ -24,19 +50,24 @@ export class EmployeesRepository {
     }
   }
 
-  async list(args: { page: number; pageSize: number }): Promise<EmployeesListResponse> {
-    const rows = await this.db
-      .selectFrom('employees')
-      .selectAll()
+  async list(args: { page: number; pageSize: number; q?: string }): Promise<EmployeesListResponse> {
+    const q = args.q?.trim();
+
+    let rowsQuery = this.db.selectFrom('employees').selectAll();
+    let countQuery = this.db.selectFrom('employees').select(sql<number>`count(*)`.as('total'));
+
+    if (q) {
+      rowsQuery = rowsQuery.where((eb) => searchPredicate(eb, q));
+      countQuery = countQuery.where((eb) => searchPredicate(eb, q));
+    }
+
+    const rows = await rowsQuery
       .orderBy('id', 'desc')
       .limit(args.pageSize)
       .offset(args.page * args.pageSize)
       .execute();
 
-    const countRow = await this.db
-      .selectFrom('employees')
-      .select(sql<number>`count(*)`.as('total'))
-      .executeTakeFirstOrThrow();
+    const countRow = await countQuery.executeTakeFirstOrThrow();
 
     return { rows, total: Number(countRow.total) };
   }

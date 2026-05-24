@@ -7,6 +7,7 @@ import type { EmployeesService } from '../services/EmployeesService';
 const listQuerySchema = z.object({
   page:     z.coerce.number().int().min(0).default(0),
   pageSize: z.coerce.number().int().min(1).max(200).default(50),
+  q:        z.string().trim().max(100).optional().transform((v) => (v === '' ? undefined : v)),
 });
 
 export class EmployeesController {

@@ -11,11 +11,16 @@ export function createEmployee(input: EmployeeCreateInput): Promise<Employee> {
 export function listEmployees(params: {
   page: number;
   pageSize: number;
+  q?: string;
 }): Promise<EmployeesListResponse> {
   const qs = new URLSearchParams({
     page: String(params.page),
     pageSize: String(params.pageSize),
   });
+
+  if (params.q && params.q.length > 0) {
+    qs.set('q', params.q);
+  }
 
   return request<EmployeesListResponse>(`/api/employees?${qs.toString()}`);
 }

@@ -48,4 +48,12 @@ describe('EmployeesService', () => {
     expect(repo.list).toHaveBeenCalledWith({ page: 2, pageSize: 25 });
     expect(result).toBe(payload);
   });
+
+  test('list forwards q through to repo.list', async () => {
+    repo.list.mockResolvedValue({ rows: [], total: 0 });
+
+    await service.list({ page: 0, pageSize: 50, q: 'asha' });
+
+    expect(repo.list).toHaveBeenCalledWith({ page: 0, pageSize: 50, q: 'asha' });
+  });
 });

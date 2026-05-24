@@ -1,11 +1,12 @@
-import { useState } from 'react';
-import { Stack, Typography, Button, Alert, Box } from '@mui/material';
+import { useEffect, useState } from 'react';
+import { Stack, Typography, Button, Alert, Box, TextField } from '@mui/material';
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import { COUNTRIES, type Employee } from '@app/shared';
 import { AddEmployeeModal } from '../components/AddEmployeeModal';
 import { EmployeeDetailsModal } from '../components/EmployeeDetailsModal';
 import { SalaryCell } from '../components/SalaryCell';
 import { useEmployeesList } from '../hooks/useEmployeesList';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 
 interface Status {
   severity: 'success' | 'error';
@@ -18,10 +19,18 @@ export function EmployeesPage() {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(50);
   const [detailsEmployee, setDetailsEmployee] = useState<Employee | null>(null);
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedQ = useDebouncedValue(searchInput.trim(), 300);
 
-  const { data, isLoading, error, refresh } = useEmployeesList(page, pageSize);
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedQ]);
 
-  const isEmpty = !isLoading && !error && data.total === 0;
+  const { data, isLoading, error, refresh } = useEmployeesList(page, pageSize, debouncedQ);
+
+  const hasQuery = debouncedQ.length > 0;
+  const isFirstRunEmpty = !isLoading && !error && !hasQuery && data.total === 0;
+  const isNoMatches    = !isLoading && !error &&  hasQuery && data.total === 0;
 
   const columns: GridColDef<Employee>[] = [
     {
@@ -78,8 +87,16 @@ export function EmployeesPage() {
         </Alert>
       )}
 
-      {!isEmpty && (
-        <Stack direction="row" justifyContent="flex-end">
+      {!isFirstRunEmpty && (
+        <Stack direction="row" spacing={2} alignItems="center">
+          <TextField
+            size="small"
+            placeholder="Search by name, email, role, department, country…"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            sx={{ flex: 1 }}
+            inputProps={{ 'aria-label': 'Search employees' }}
+          />
           <Button variant="contained" onClick={() => setOpen(true)}>
             Add Employee
           </Button>
@@ -88,7 +105,7 @@ export function EmployeesPage() {
 
       {error && <Alert severity="error">{error}</Alert>}
 
-      {isEmpty ? (
+      {isFirstRunEmpty && (
         <Stack spacing={2} alignItems="center" sx={{ py: 10 }}>
           <Typography variant="h6" color="text.secondary">
             No employees yet
@@ -100,7 +117,20 @@ export function EmployeesPage() {
             Add Employee
           </Button>
         </Stack>
-      ) : (
+      )}
+
+      {isNoMatches && (
+        <Stack spacing={1} alignItems="center" sx={{ py: 6 }}>
+          <Typography variant="h6" color="text.secondary">
+            No matches for &ldquo;{debouncedQ}&rdquo;
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Try a different search term.
+          </Typography>
+        </Stack>
+      )}
+
+      {!isFirstRunEmpty && !isNoMatches && (
         <Box sx={{ height: 640 }}>
           <DataGrid
             rows={data.rows}

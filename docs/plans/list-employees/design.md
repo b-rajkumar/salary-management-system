@@ -15,14 +15,15 @@ The PRD documents the eventual feature: paginated **and** sortable **and** searc
 ### In scope
 
 - **Seed script.** `backend/scripts/seed.ts` generates 10,000 employees from `data/first_names.txt` and `data/last_names.txt`, inserts them in a single transaction. `--reset` truncates the `employees` table first. `npm run seed --workspace backend`. Built first inside the slice so everything downstream is exercised at real volume.
-- **Backend list endpoint.** `GET /api/employees?page&pageSize` → `{ rows: Employee[], total: number }`. Adds `list` methods to `EmployeesRepository`, `EmployeesService`, `EmployeesController`. Default sort is `id DESC` — newest first, so a freshly added row appears at the top of page 1 and HR can confirm the create immediately. Stable across pages.
+- **Backend list endpoint.** `GET /api/employees?page&pageSize&q` → `{ rows: Employee[], total: number }`. Adds `list` methods to `EmployeesRepository`, `EmployeesService`, `EmployeesController`. Default sort is `id DESC` — newest first, so a freshly added row appears at the top of page 1 and HR can confirm the create immediately. Stable across pages.
+- **Case-insensitive search.** `q` filters across firstName, lastName, email, jobTitle, department, and country (matching either the ISO code or the country name). The same `WHERE` clause is applied to the rows query and the COUNT query so `total` reflects the search result.
 - **Frontend list view.** Replaces the FR-1 placeholder on the Employees page with MUI `<DataGrid>` in server-side pagination mode. Visible columns: full name (combined firstName + lastName), country, salary, hire date. Salary cell formatted with `Intl.NumberFormat` using each row's `country → currency`. Each row has a "View" action opening a read-only details modal with all fields — the canvas FR-3/FR-4 will extend.
+- **Search input** in the page header (next to the Add button) with a 300ms debounce. Typing resets pagination to page 0.
 - **Post-create refresh.** When the Add Employee modal succeeds, the grid refetches the current page so the new row shows up.
 
-### Deferred to the next slice (`search-and-sort-employees`)
+### Deferred to the next slice (`sort-employees`)
 
 - `sortBy` / `sortDir` query params + per-column sort handles. Whitelist: `firstName`, `lastName`, `email`, `hireDate`. **Salary sort is permanently excluded** — raw cross-currency integer ordering is misleading (PRD §5 FR-2 reflects this).
-- `q` search param + a debounced search input above the grid (`LIKE '%q%'` across firstName, lastName, email).
 
 ### Deferred to later slices (as already planned)
 
@@ -38,15 +39,36 @@ The PRD documents the eventual feature: paginated **and** sortable **and** searc
 GET /api/employees
   ?page=0       (int, default 0, min 0)
   &pageSize=50  (int, default 50, min 1, max 200)
+  &q=alice      (string, max 100 chars, trimmed, dropped if empty after trim; optional)
 
 200 → { rows: Employee[], total: number }
-400 → { error: { code: "VALIDATION_ERROR", ... } }   if page or pageSize is invalid
+400 → { error: { code: "VALIDATION_ERROR", ... } }   if a param is invalid
 ```
 
 - Rows are ordered by `id DESC` — newest first. A freshly added row appears at the top of page 1, giving HR immediate visual confirmation that the add landed. Insertion order is the only sort claim; sort by user-facing columns ships with the next slice.
 - Empty result: `200` with `{ rows: [], total: 0 }`. Never a `404`.
-- `total` is the unfiltered `COUNT(*)` of the employees table for this slice (no filters exist yet).
-- A single Zod schema in the controller coerces and validates both query params.
+- `total` reflects rows matching the active `q` filter (or unfiltered count if `q` is absent). The same `WHERE` clause is applied to both queries so pagination math stays correct under search.
+- A single Zod schema in the controller coerces and validates the query params. `q` is trimmed; empty-after-trim becomes `undefined` so the service call shape stays clean.
+
+### Search predicate
+
+When `q` is present, both the rows and count queries add the same `WHERE` clause:
+
+```
+LOWER(firstName) LIKE %q% OR
+LOWER(lastName)  LIKE %q% OR
+LOWER(email)     LIKE %q% OR
+LOWER(jobTitle)  LIKE %q% OR
+LOWER(department) LIKE %q% OR
+LOWER(country)   LIKE %q% OR                 -- matches ISO codes ('IN', 'US', ...)
+country IN ( …codes from COUNTRIES name lookup… )  -- 'india' → ['IN'], 'united' → ['US', 'GB']
+```
+
+`q` is lowercased once in JS before binding; `LOWER(column)` ensures both sides of every `LIKE` are case-folded.
+
+The country name lookup runs in JS against the `COUNTRIES` map (5 entries — microseconds, no DB round trip). The `country IN (...)` term is only added when the name lookup yields at least one match.
+
+Search is intentionally limited to text fields. Salary and hireDate are out of scope: free-text matching on numbers/dates is noisy (`150` would match `150`, `1500`, `15000`, …; `2024` would match every Jan or year). Numeric/date filters belong to a different UI pattern (filter sidebar) which is out of scope for the assignment.
 
 ---
 
@@ -259,11 +281,12 @@ In display order: **Name** (firstName + lastName combined via `valueGetter`), **
   Extracted into `frontend/src/components/SalaryCell.tsx` (~10 lines) to keep the column definitions tidy and the formatting testable in isolation.
 - **`hireDate`** displays the ISO string as-is.
 
-### Three explicit states
+### Explicit states
 
 - **Loading:** `<DataGrid loading={isLoading}>` — built-in overlay. No separate skeleton.
-- **Empty:** `!isLoading && !error && data.total === 0` → the grid and the top-right Add button are hidden; a centered first-run CTA appears (heading "No employees yet", subtext "Add your first employee to get started.", primary Add Employee button). Friendlier than an empty table shell with column headers and a "No rows" overlay.
-- **Error:** `<Alert severity="error">` above the grid; the grid still renders (with whatever `data` was last fetched, or empty on first load). Empty-state CTA is suppressed under error since the count is unknown.
+- **First-run empty:** `!isLoading && !error && q === '' && data.total === 0` → the grid and the search/Add row are hidden; a centered CTA appears (heading "No employees yet", subtext "Add your first employee to get started.", primary Add Employee button). Friendlier than an empty table shell.
+- **No matches:** `!isLoading && !error && q !== '' && data.total === 0` → the search bar stays visible (so HR can correct or clear the query); the grid is hidden; a centered "No matches for '{q}'" message appears. No Add CTA in this state — adding wouldn't change the search outcome.
+- **Error:** `<Alert severity="error">` above the grid; the grid still renders (with whatever `data` was last fetched, or empty on first load). Empty/no-match states are suppressed under error since the count is unknown.
 
 ### Post-create refresh
 

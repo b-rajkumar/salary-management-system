@@ -148,4 +148,56 @@ describe('EmployeesPage', () => {
       expect(screen.queryByRole('dialog', { name: /Employee details/i })).not.toBeInTheDocument(),
     );
   });
+
+  it('shows a search input when there are rows', async () => {
+    mockedList.mockResolvedValueOnce({ rows: [fakeRow], total: 1 });
+
+    render(<EmployeesPage />);
+
+    expect(await screen.findByPlaceholderText(/Search by name/i)).toBeInTheDocument();
+  });
+
+  it('typing in the search box triggers a refetch with q after the debounce', async () => {
+    mockedList.mockResolvedValueOnce({ rows: [fakeRow], total: 1 });
+    const user = userEvent.setup();
+
+    render(<EmployeesPage />);
+
+    await waitFor(() => expect(mockedList).toHaveBeenCalledTimes(1));
+    expect(mockedList).toHaveBeenLastCalledWith({ page: 0, pageSize: 50, q: undefined });
+
+    await user.type(screen.getByPlaceholderText(/Search by name/i), 'asha');
+
+    await waitFor(
+      () =>
+        expect(mockedList).toHaveBeenCalledWith(
+          expect.objectContaining({ q: 'asha', page: 0 }),
+        ),
+      { timeout: 1500 },
+    );
+  });
+
+  it('renders a "No matches" state when search returns zero results', async () => {
+    mockedList.mockResolvedValueOnce({ rows: [fakeRow], total: 1 });
+    mockedList.mockResolvedValue({ rows: [], total: 0 });
+    const user = userEvent.setup();
+
+    render(<EmployeesPage />);
+    await waitFor(() => expect(screen.getByText('Asha Rao')).toBeInTheDocument());
+
+    await user.type(screen.getByPlaceholderText(/Search by name/i), 'zzz');
+
+    expect(await screen.findByText(/No matches for/i, {}, { timeout: 1500 }))
+      .toBeInTheDocument();
+
+    expect(screen.queryByText('No employees yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('Add your first employee to get started.')).not.toBeInTheDocument();
+  });
+
+  it('does not show the search bar when the first-run empty state is active', async () => {
+    render(<EmployeesPage />);
+
+    await screen.findByText('No employees yet');
+    expect(screen.queryByPlaceholderText(/Search by name/i)).not.toBeInTheDocument();
+  });
 });

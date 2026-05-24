@@ -9,7 +9,7 @@ export interface UseEmployeesListResult {
   refresh: () => void;
 }
 
-export function useEmployeesList(page: number, pageSize: number): UseEmployeesListResult {
+export function useEmployeesList(page: number, pageSize: number, q = ''): UseEmployeesListResult {
   const [data, setData] = useState<EmployeesListResponse>({ rows: [], total: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +21,7 @@ export function useEmployeesList(page: number, pageSize: number): UseEmployeesLi
     setIsLoading(true);
     setError(null);
 
-    listEmployees({ page, pageSize })
+    listEmployees({ page, pageSize, q: q || undefined })
       .then((res) => {
         if (!cancelled) {
           setData(res);
@@ -41,7 +41,7 @@ export function useEmployeesList(page: number, pageSize: number): UseEmployeesLi
     return () => {
       cancelled = true;
     };
-  }, [page, pageSize, reloadKey]);
+  }, [page, pageSize, q, reloadKey]);
 
   const refresh = useCallback(() => {
     setReloadKey((k) => k + 1);

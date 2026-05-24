@@ -155,7 +155,7 @@ REST under `/api`. All responses JSON. Validation via Zod at every input boundar
 **`GET /api/employees` query params:**
 - `page` (default 0), `pageSize` (default 50, max 200)
 - `sortBy` (one of: `firstName`, `lastName`, `email`, `hireDate`), `sortDir` (`asc`|`desc`)
-- `q` (search across firstName, lastName, email — SQL `LIKE`, sufficient at 10k rows)
+- `q` (case-insensitive search across firstName, lastName, email, jobTitle, department, and country; country matches both the ISO code via `LOWER(country) LIKE` and the country name via a JS-side `COUNTRIES` lookup that translates to a set of codes for an `IN (...)` clause. SQL `LIKE` is sufficient at 10k rows.)
 
 **Default order:** when `sortBy` is omitted, rows return ordered by `id DESC` — newest first. This keeps a freshly added row on page 1 so HR can confirm the add immediately. Insertion order is the only sort claim of the default; user-driven sorts override it.
 

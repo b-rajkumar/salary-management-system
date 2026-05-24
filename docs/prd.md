@@ -49,7 +49,7 @@ The HR Manager can create a new employee record. The system requires: first name
 The HR Manager can see a list of employees showing the key fields at a glance — full name, country, salary, and hire date. Each row has a "View" action that opens a details popup with every field on the record (the natural canvas for FR-3 edit and FR-4 delete actions later). Recently added employees appear first by default — a freshly created row shows on page 1 without HR having to navigate. The list supports:
 - Pagination across the full dataset.
 - Sorting by name, email, and hire date.
-- Free-text search across name and email.
+- Case-insensitive free-text search across first name, last name, email, job title, department, and country (matching either the ISO code like `IN` or the country name like `India`). Salary and hire date are intentionally excluded from search — those are numeric/date concerns, not identity, and free-text matching on them produces noisy results (e.g. `150` would match `150`, `1500`, `15000`, ...).
 
 ### FR-3 — Update an employee
 The HR Manager can edit any field on an existing employee record. The same validation rules as FR-1 apply.

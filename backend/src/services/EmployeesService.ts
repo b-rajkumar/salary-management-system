@@ -8,7 +8,7 @@ export class EmployeesService {
     return this.repo.insert(input);
   }
 
-  list(args: { page: number; pageSize: number }): Promise<EmployeesListResponse> {
+  list(args: { page: number; pageSize: number; q?: string }): Promise<EmployeesListResponse> {
     return this.repo.list(args);
   }
 }

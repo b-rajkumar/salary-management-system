@@ -113,4 +113,27 @@ describe('GET /api/employees', () => {
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
     expect(service.list).not.toHaveBeenCalled();
   });
+
+  test('200 forwards q through to the service', async () => {
+    const res = await request(app).get('/api/employees?q=asha');
+
+    expect(res.status).toBe(200);
+    expect(service.list).toHaveBeenCalledWith({ page: 0, pageSize: 50, q: 'asha' });
+  });
+
+  test('200 trims q and drops it from the call when empty after trimming', async () => {
+    const res = await request(app).get('/api/employees?q=%20%20%20');
+
+    expect(res.status).toBe(200);
+    expect(service.list).toHaveBeenCalledWith({ page: 0, pageSize: 50 });
+  });
+
+  test('400 VALIDATION_ERROR when q exceeds 100 chars', async () => {
+    const longQ = 'a'.repeat(101);
+    const res = await request(app).get(`/api/employees?q=${longQ}`);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(service.list).not.toHaveBeenCalled();
+  });
 });
