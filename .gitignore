@@ -1,9 +1,28 @@
 node_modules/
 dist/
+
+# tsc -b incremental build cache
+*.tsbuildinfo
+
+# Emitted by tsc -b for the composite node-side TS config; Vite reads vite.config.ts directly.
+frontend/vite.config.js
+frontend/vite.config.d.ts
+
+# SQLite — main file + WAL-mode sidecars + rollback journal
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+
+# Playwright runs (CI suite + MCP browser session dumps)
 .playwright-tmp/
+.playwright-mcp/
 playwright-report/
 test-results/
-data/*.db
-*.db
+
+# Per-slice implementation plans are working notes for the agents that execute them, not source of truth.
+docs/plans/**/plan.md
+
+# Local config
 .env
 .DS_Store
