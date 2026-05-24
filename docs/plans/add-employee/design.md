@@ -16,7 +16,7 @@ Companion to [PRD §5 FR-1](../../prd.md) and [Engineering Design](../../enginee
 - **Shared package.** `Employee` and `EmployeeCreateInput` types, `COUNTRIES` frozen map (5 entries — US, IN, GB, DE, JP — enough to demonstrate currency variance), and `employeeCreateSchema` (Zod, shared between client and server).
 - **Backend.** `migrate()` runner + `001_init.sql` (full schema with both indexes — schema lives in one migration), `db/types.ts` + `db/client.ts`, error taxonomy + Express middleware, `EmployeesRepository.insert` / `EmployeesService.create` / `EmployeesController.create`, route wiring for `POST /api/employees`, tests per layer.
 - **Frontend.** Vite + React + MUI `<ThemeProvider>` (default light theme), `<AppBar>` with two tabs, Employees page (header + status `<Alert>` slot + Add button + body placeholder), `<AddEmployeeModal>` with `react-hook-form` + the shared Zod schema, `<FormField>` wrapper, typed `api/employees.ts` fetch wrapper.
-- **End-to-end verification.** Playwright suite covering the happy path, the duplicate-email inline error, and client-side validation blocking submit.
+- **Component-level RTL tests** over the frontend pieces (`FormField`, `AddEmployeeModal`, `EmployeesPage`); live browser verification by the controlling agent via the Playwright MCP browser tool (one-time check before declaring the slice shippable).
 
 ### Deferred to later slices
 
@@ -191,21 +191,25 @@ Per CLAUDE.md mock-at-boundaries.
   - `400 VALIDATION_ERROR` for: missing required field, malformed email, unknown country code, `salary = 0`, `salary = -1`, future `hireDate`
   - `409 EMAIL_TAKEN` when the service throws `ConflictError`
 
-### End-to-end (Playwright)
+### Frontend (Jest + React Testing Library)
 
-Playwright drives the real frontend against the real backend. RTL is intentionally not used in FR-1 — the same behavior is verified through the actual UI.
+RTL tests run in jsdom via `jest` and cover the three frontend pieces.
 
-Playwright lives at `frontend/e2e/` with its own `playwright.config.ts`. The config's `webServer` block launches:
-- the backend (`node backend/dist/server.js`) with a temp `DATABASE_PATH` (e.g. a path under `.playwright-tmp/`), schema applied by the in-app `migrate()` runner on startup
-- Vite preview serving the built frontend, proxied to the backend
+`frontend/src/components/FormField.test.tsx`:
+- renders the TextField with the provided `label`
+- shows the field error from RHF `fieldState` in `helperText`
 
-The DB file is recreated fresh before each Playwright run (via `globalSetup`). Within a run, specs use distinct emails so they don't interfere with each other; per-test resets aren't worth the complexity for three specs.
+`frontend/src/components/AddEmployeeModal.test.tsx`:
+- submitting an empty form shows required validation errors and does not call `createEmployee`
+- a valid submit calls `createEmployee` with the correct payload, calls `onCreated`, and closes the modal
+- a 409 `EMAIL_TAKEN` response sets an inline error on the email field and keeps the modal open
+- a generic `ApiError` surfaces the error message in the modal's inline `<Alert severity="error">`
 
-`frontend/e2e/add-employee.spec.ts`:
+`frontend/src/pages/EmployeesPage.test.tsx`:
+- clicking "Add Employee" opens the modal
+- the `onCreated` callback closes the modal and shows a success `<Alert>` with "Added {firstName} {lastName}"
 
-- **happy path** — open `/`, click Add Employee, fill the form (selecting "IN" reveals the `INR` adornment), submit; modal closes; page `<Alert severity="success">` shows "Added {First} {Last}".
-- **duplicate email surfaces inline** — POST one employee through the API; open the form and submit a second create with the same email; the modal stays open and the email field's `helperText` reads "Email already in use".
-- **client-side validation blocks submit** — open the form and click Submit immediately; each required field's `helperText` shows the validation message; no network request is fired (asserted via `page.route` interception).
+Live browser verification (happy path, duplicate-email inline error, client-side validation blocking submit) is performed by the controlling agent via the Playwright MCP browser tool before declaring the slice shippable.
 
 ---
 

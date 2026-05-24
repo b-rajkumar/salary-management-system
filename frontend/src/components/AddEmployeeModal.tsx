@@ -9,6 +9,14 @@ import {
   employeeCreateSchema, COUNTRIES,
   type EmployeeCreateInput, type Employee, type CountryCode,
 } from '@app/shared';
+import { z } from 'zod';
+
+// The shared schema expects `salary` as a number, but HTML number inputs
+// give string values. This local extension coerces salary from string so
+// the zodResolver can validate form inputs correctly in both browser and jsdom.
+const modalSchema = employeeCreateSchema.extend({
+  salary: z.coerce.number({ invalid_type_error: 'Required' }).int('Whole numbers only').min(1, 'Must be at least 1'),
+});
 import { createEmployee } from '../api/employees';
 import { ApiError } from '../api/client';
 import { FormField } from './FormField';
@@ -37,7 +45,7 @@ const emptyDefaults: FormValues = {
 
 export function AddEmployeeModal({ open, onClose, onCreated }: Props) {
   const { control, handleSubmit, watch, setError, reset, formState } = useForm<FormValues>({
-    resolver: zodResolver(employeeCreateSchema) as never,
+    resolver: zodResolver(modalSchema) as never,
     mode: 'onBlur',
     defaultValues: emptyDefaults,
   });
