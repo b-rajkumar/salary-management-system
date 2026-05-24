@@ -169,16 +169,45 @@ REST under `/api`. All responses JSON. Validation via Zod at every input boundar
 
 | Method | Path                                                  | Purpose |
 |--------|-------------------------------------------------------|---------|
-| GET    | `/api/insights/country/:country`                      | min, max, avg salary in a country |
-| GET    | `/api/insights/country/:country/job-title?title=...`  | avg salary for a job title in a country |
+| GET    | `/api/insights/country/:country`                      | salary distribution + headcount + tenure + department breakdown for a country |
+| GET    | `/api/insights/country/:country/job-titles`           | distinct job titles present in a country (picker source for FR-6) |
+| GET    | `/api/insights/country/:country/job-title?title=...`  | salary distribution + headcount + tenure for a (country, job title) pair |
 
-Both return `404` when no matching employees exist. Responses include the country's `currency` (ISO 4217 alpha-3) so the UI can format without having to look it up:
+All three return `404` when no matching employees exist (`COUNTRY_NOT_FOUND` for the first two, `ROLE_IN_COUNTRY_NOT_FOUND` for the third). Responses include the country's `currency` (ISO 4217 alpha-3) so the UI can format without a second lookup.
+
+**Country response:**
 
 ```json
-{ "country": "IN", "currency": "INR", "min": 600000, "max": 4500000, "avg": 1820000, "count": 312 }
+{
+  "country": "IN", "currency": "INR", "count": 312,
+  "salary": { "min": 600000, "max": 4500000, "avg": 1820000 },
+  "tenure": { "avgYears": 3.4, "newHiresLast12Months": 47 },
+  "departments": [
+    { "department": "Engineering", "headcount": 180, "avgSalary": 2100000 },
+    { "department": "Sales",        "headcount": 78,  "avgSalary": 1400000 }
+  ]
+}
 ```
 
-Numeric results are integers in whole units of that currency. No FX conversion is performed anywhere in the system.
+**Job-titles response:**
+
+```json
+{ "country": "IN", "jobTitles": ["Designer", "Engineering Manager", "Product Manager", "Software Engineer"] }
+```
+
+**Role-in-country response:**
+
+```json
+{
+  "country": "IN", "currency": "INR", "jobTitle": "Software Engineer", "count": 87,
+  "salary": { "min": 800000, "max": 3200000, "avg": 1650000 },
+  "tenure": { "avgYears": 2.8, "newHiresLast12Months": 19 }
+}
+```
+
+All numeric salary fields are integers in whole units of that country's currency. `tenure.avgYears` is rounded to one decimal. No FX conversion is performed anywhere in the system.
+
+Both `idx_employees_country` and `idx_employees_country_jobTitle` cover the filter step at 10k rows.
 
 ### Error responses
 
@@ -200,11 +229,30 @@ Uniform shape: `{ error: { code: string, message: string, details?: object } }`.
 ### Country insights
 
 1. `GET /api/insights/country/:country` arrives.
-2. `InsightsController` validates `country` matches the ISO alpha-2 pattern.
-3. Controller calls `insightsService.byCountry(country)`, which calls `EmployeesRepository.aggregateByCountry(country)`.
-4. The repository runs a Kysely aggregation (MIN / MAX / AVG / COUNT) over the `country`-filtered rows and returns `{ min, max, avg, count }`. The `(country)` index keeps this cheap.
-5. If `count === 0` → service throws `NotFoundError("COUNTRY_NOT_FOUND")` → middleware maps to `404`.
-6. Otherwise → `{ country, min, max, avg, count }`.
+2. `InsightsController` validates `country` against the ISO alpha-2 whitelist built from `COUNTRIES`.
+3. Controller calls `insightsService.byCountry(country)`. The service calls two repository methods on `InsightsRepository`:
+   - `aggregateByCountry(country)` — one query: count + min/max/mean + avg tenure + new-hires-last-12-months.
+   - `departmentsByCountry(country)` — one query: `GROUP BY department` returning `[{ department, headcount, avgSalary }]`, sorted by headcount desc.
+4. If the aggregate's `count === 0` → `NotFoundError("COUNTRY_NOT_FOUND")` → middleware maps to `404`.
+5. Otherwise the service assembles the response (including `currency` from `COUNTRIES[country].currency`) and returns it.
+
+Both queries hit `idx_employees_country`. Two queries instead of one is the price for a clean per-department breakdown; both are sub-millisecond at 10k rows.
+
+### Role-in-country insights
+
+1. `GET /api/insights/country/:country/job-title?title=...` arrives.
+2. Controller validates `country` (whitelist) and `title` (non-empty, trimmed string).
+3. Service calls `InsightsRepository.aggregateByCountryAndRole(country, title)` — same shape as `aggregateByCountry`, no department breakdown, filtered by `(country, jobTitle)`. Uses `idx_employees_country_jobTitle`.
+4. `count === 0` → `NotFoundError("ROLE_IN_COUNTRY_NOT_FOUND")` → `404`.
+5. Otherwise → assembled response with `currency` and `jobTitle` echoed back.
+
+### Job-titles picker
+
+1. `GET /api/insights/country/:country/job-titles` arrives.
+2. Controller validates the country.
+3. Service calls `InsightsRepository.jobTitlesByCountry(country)` — `SELECT DISTINCT jobTitle FROM employees WHERE country = ? ORDER BY jobTitle`.
+4. Empty list → `NotFoundError("COUNTRY_NOT_FOUND")` → `404`. Keeps the empty-country signal consistent with the country aggregate endpoint.
+5. Otherwise → `{ country, jobTitles: [...] }`.
 
 ## 7. Seed Script
 

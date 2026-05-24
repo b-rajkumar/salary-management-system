@@ -27,8 +27,8 @@ The HR Manager today lacks a single tool to keep employee records current and to
   - Update an existing employee's record.
   - Delete an employee.
 - Salary insights through the UI, expressed in the country's local currency:
-  - **Country view:** minimum, maximum, and average salary among employees in a selected country.
-  - **Role-in-country view:** average salary for a selected job title within a selected country.
+  - **Country view:** salary distribution (min, max, mean), total headcount, average tenure, hires in the last 12 months, and a per-department breakdown (headcount + average salary) for the selected country.
+  - **Role-in-country view:** the same salary distribution and headcount/tenure shape, filtered to a specific job title within the selected country. The job-title picker offers only titles that exist in the chosen country's data.
 - A seed mechanism that populates the system with 10,000 realistic employee records so the tool can be evaluated at scale.
 
 ### Out of scope (deliberate)
@@ -38,7 +38,7 @@ The HR Manager today lacks a single tool to keep employee records current and to
 - Soft delete, audit trail, or change history.
 - Manager / reporting hierarchy.
 - Bulk import/export (CSV, Excel) through the UI.
-- Metrics beyond the two listed above.
+- Metrics beyond what FR-5 and FR-6 specify (e.g. salary history trends, cross-country salary comparison, salary bands / compa-ratios, gender or other demographic distributions).
 
 ## 5. Functional Requirements
 
@@ -63,10 +63,21 @@ The Save button is disabled while the form is pristine. The system maintains a s
 The HR Manager can delete any employee record. Each row in the employee grid has a kebab menu (View / Edit / Delete); a Delete button also appears in the unified employee dialog's view-mode footer (Close | Delete | Edit). Both entry points open the same confirm modal showing the employee's name, email, and country code (e.g. "Delete Asha Rao (asha@example.com, IN)? This cannot be undone."). On confirmation a snackbar reports "Employee deleted" and the grid refetches. Deletion is permanent (see §7 Assumptions); there is no audit log and no undo. If the row is already gone (race / repeated click), the UI treats the resulting 404 as success and surfaces "Employee already deleted."
 
 ### FR-5 — Country salary insights
-The HR Manager can select a country and see the minimum, maximum, and average salary of employees in that country, expressed in that country's local currency. If the country has no employees, the system says so.
+The HR Manager can select a country and see a snapshot of compensation and headcount for employees in that country, all in the country's local currency:
+
+- **Salary distribution:** minimum, maximum, and mean salary.
+- **Headcount and tenure:** total employee count, average tenure (years since hire date), and the number of hires in the last 12 months.
+- **Department breakdown:** for each department in that country, the headcount and the average salary in that department.
+
+If the country has no employees, the system says so via an inline empty state (not an error alert).
 
 ### FR-6 — Role-in-country salary insights
-The HR Manager can select a country and a job title and see the average salary for that role in that country, expressed in that country's local currency. If no matching employees exist, the system says so.
+The HR Manager can select a country and a job title and see compensation and headcount for that specific role in that country, in the country's local currency:
+
+- **Salary distribution for the role:** minimum, maximum, and mean. Same shape as FR-5.
+- **Headcount and tenure for the role:** number of employees holding that title in that country, average tenure, and hires in the last 12 months.
+
+Job titles in the picker are sourced from the actual employees in the selected country — HR picks from titles that exist, never types one verbatim. If no matching employees exist (an unreachable state via the picker alone, but a safety net), the system says so via an inline empty state.
 
 ## 6. Non-Functional Requirements
 
