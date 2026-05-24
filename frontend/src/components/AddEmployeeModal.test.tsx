@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AddEmployeeModal } from './AddEmployeeModal';
 import { createEmployee } from '../api/employees';
@@ -23,12 +23,6 @@ const fakeEmployee: Employee = {
   updatedAt: '2024-01-15T00:00:00.000Z',
 };
 
-/**
- * Fill all required fields with valid data.
- * For the salary `type="number"` input, fireEvent.change is used so jsdom
- * propagates the numeric value through the React synthetic event — user.type
- * produces keystrokes that don't set valueAsNumber in jsdom.
- */
 async function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('First name'), 'Asha');
   await user.type(screen.getByLabelText('Last name'), 'Rao');
@@ -36,24 +30,14 @@ async function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('Job title'), 'Software Engineer');
   await user.type(screen.getByLabelText('Department'), 'Engineering');
 
-  // MUI Select renders as a combobox in jsdom
   await user.click(screen.getByRole('combobox', { name: /Country/i }));
   await user.click(await screen.findByRole('option', { name: /India \(IN\)/ }));
 
-  // jsdom doesn't coerce type="number" input values to numbers via React events.
-  // Use the native HTMLInputElement value setter + dispatch 'change' so React's
-  // synthetic event sees the string "1500000" and z.coerce.number() handles the rest.
-  const salaryInput = screen.getByLabelText('Salary') as HTMLInputElement;
-  const nativeValueSetter = Object.getOwnPropertyDescriptor(
-    window.HTMLInputElement.prototype,
-    'value',
-  )?.set;
-
-  nativeValueSetter?.call(salaryInput, '1500000');
-  salaryInput.dispatchEvent(new Event('input', { bubbles: true }));
-  salaryInput.dispatchEvent(new Event('change', { bubbles: true }));
-
-  await user.type(screen.getByLabelText('Hire date'), '2024-01-15');
+  // fireEvent.change wraps the update in act() and sets the value via React's
+  // synthetic event in one go; user.type fires keystrokes that don't reliably
+  // populate type="number" inputs through RHF + jsdom.
+  fireEvent.change(screen.getByLabelText('Salary'), { target: { value: '1500000' } });
+  fireEvent.change(screen.getByLabelText('Hire date'), { target: { value: '2024-01-15' } });
 }
 
 beforeEach(() => {
