@@ -52,7 +52,12 @@ The HR Manager can see a list of employees showing the key fields at a glance �
 - Case-insensitive free-text search across first name, last name, email, job title, department, and country (matching either the ISO code like `IN` or the country name like `India`). Salary and hire date are intentionally excluded from search — those are numeric/date concerns, not identity, and free-text matching on them produces noisy results (e.g. `150` would match `150`, `1500`, `15000`, ...).
 
 ### FR-3 — Update an employee
-The HR Manager can edit any field on an existing employee record. The same validation rules as FR-1 apply.
+The HR Manager can edit any field on an existing employee record from a unified employee dialog (the same surface used to add and view employees). The same validation rules as FR-1 apply, with two field-specific guards:
+
+- **Country change clears the salary.** Salary is denominated in the country's currency. Changing the country empties the salary field and prompts HR to re-enter the value in the new currency, preventing a silent currency mismatch.
+- **Hire date carries an inline note.** "Edit only to correct a typo — hire date is a historical record." There is no audit log, so unintended hire-date edits cannot be recovered.
+
+The Save button is disabled while the form is pristine. The system maintains a server-side `updatedAt` timestamp on every save; it is shown alongside `createdAt` in the dialog's view mode.
 
 ### FR-4 — Delete an employee
 The HR Manager can delete an employee record. The system confirms the action before deleting. Deletion is permanent (see "Assumptions").

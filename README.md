@@ -109,13 +109,14 @@ docs/            PRD, design, decisions, per-slice plans
 
 Shipped so far:
 - **Add employee (FR-1)** — `POST /api/employees` with full Zod validation and inline `409` duplicate-email mapping; MUI modal form with shared validation, country-driven currency display, success and error Alerts.
-- **View employees (FR-2)** — `GET /api/employees?page&pageSize&q` returning `{ rows, total }`. MUI `<DataGrid>` in server-side pagination mode, slimmed to the at-a-glance columns (Name, Country, Salary, Hire date) with a per-row "View" details popup. New rows from the Add form trigger an automatic grid refresh. First-run empty state shows a centered CTA instead of an empty table shell.
+- **View employees (FR-2)** — `GET /api/employees?page&pageSize&q` returning `{ rows, total }`. MUI `<DataGrid>` in server-side pagination mode, slimmed to the at-a-glance columns (Name, Country, Salary, Hire date) with a per-row "View" action that opens the unified employee dialog. New rows from the Add form trigger an automatic grid refresh. First-run empty state shows a centered CTA instead of an empty table shell.
 - **Case-insensitive search** — debounced text box filters across first name, last name, email, job title, department, and country (matching either the ISO code `IN` or the country name `India`). Search composes with pagination; `total` reflects the search result count.
+- **Update employee (FR-3)** — `PUT /api/employees/:id`. A unified `EmployeeDialog` replaces today's separate Add and View modals: row click opens view mode → **Edit** transitions in-place to a prefilled form with two guards (changing country auto-clears salary and prompts re-entry in the new currency; hire-date carries an inline "historical record" note) and Save disabled while pristine. Success returns to view mode showing the updated row. `updatedAt` is maintained server-side on every save.
 - **Seed script** — 10,000-row bulk insert in a single transaction with `--reset` for idempotent re-runs; per-job-title × per-country salary table chosen to look plausible in each country's local currency (no FX conversion).
-- **Backend tests** per layer (48 total); **frontend RTL** tests covering hooks, components, and the page (32 total).
+- **Backend tests** per layer (64 total); **frontend RTL** tests covering hooks, components, and the page (40 total).
 
 Deliberately deferred:
 - **Column sort** — `?sortBy=...&sortDir=...` with per-column sort handles. Next slice. Whitelist: firstName, lastName, email, hireDate. (Salary sort is *permanently* excluded — see PRD §5 FR-2 — because raw cross-currency salary ordering is misleading.)
-- **Update / delete employee** (FR-3, FR-4). The details popup is already the natural canvas — Edit and Delete buttons join the Close button when those land.
+- **Delete employee (FR-4).** The dialog is already the natural canvas — a Delete button joins Edit when this lands.
 - **Insights endpoints + page** (FR-5, FR-6) — country selector → min/max/avg cards; country + job title selector → average for the role.
 - **Multi-stage Dockerfile + Render deploy.**
