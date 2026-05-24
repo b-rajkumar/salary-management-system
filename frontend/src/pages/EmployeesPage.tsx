@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { Stack, Typography, Button, Alert, Box, TextField } from '@mui/material';
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import { COUNTRIES, type Employee } from '@app/shared';
-import { AddEmployeeModal } from '../components/AddEmployeeModal';
-import { EmployeeDetailsModal } from '../components/EmployeeDetailsModal';
+import { EmployeeDialog } from '../components/EmployeeDialog';
 import { SalaryCell } from '../components/SalaryCell';
 import { useEmployeesList } from '../hooks/useEmployeesList';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
@@ -13,12 +12,16 @@ interface Status {
   message: string;
 }
 
+type DialogState =
+  | { intent: 'create' }
+  | { intent: 'inspect'; employee: Employee }
+  | null;
+
 export function EmployeesPage() {
-  const [open, setOpen] = useState(false);
+  const [dialogState, setDialogState] = useState<DialogState>(null);
   const [status, setStatus] = useState<Status | null>(null);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(50);
-  const [detailsEmployee, setDetailsEmployee] = useState<Employee | null>(null);
   const [searchInput, setSearchInput] = useState('');
   const debouncedQ = useDebouncedValue(searchInput.trim(), 300);
 
@@ -68,7 +71,7 @@ export function EmployeesPage() {
       renderCell: (params) => (
         <Button
           size="small"
-          onClick={() => setDetailsEmployee(params.row)}
+          onClick={() => setDialogState({ intent: 'inspect', employee: params.row })}
           aria-label={`View ${params.row.firstName} ${params.row.lastName}`}
         >
           View
@@ -97,7 +100,7 @@ export function EmployeesPage() {
             sx={{ flex: 1 }}
             inputProps={{ 'aria-label': 'Search employees' }}
           />
-          <Button variant="contained" onClick={() => setOpen(true)}>
+          <Button variant="contained" onClick={() => setDialogState({ intent: 'create' })}>
             Add Employee
           </Button>
         </Stack>
@@ -113,7 +116,7 @@ export function EmployeesPage() {
           <Typography variant="body2" color="text.secondary">
             Add your first employee to get started.
           </Typography>
-          <Button variant="contained" onClick={() => setOpen(true)}>
+          <Button variant="contained" onClick={() => setDialogState({ intent: 'create' })}>
             Add Employee
           </Button>
         </Stack>
@@ -153,21 +156,32 @@ export function EmployeesPage() {
         </Box>
       )}
 
-      <AddEmployeeModal
-        open={open}
-        onClose={() => setOpen(false)}
-        onCreated={(e: Employee) => {
-          setOpen(false);
-          setStatus({ severity: 'success', message: `Added ${e.firstName} ${e.lastName}` });
-          refresh();
-        }}
-      />
+      {dialogState?.intent === 'create' && (
+        <EmployeeDialog
+          open
+          intent="create"
+          onClose={() => setDialogState(null)}
+          onSaved={(e) => {
+            setDialogState(null);
+            setStatus({ severity: 'success', message: `Added ${e.firstName} ${e.lastName}` });
+            refresh();
+          }}
+        />
+      )}
 
-      <EmployeeDetailsModal
-        open={detailsEmployee !== null}
-        employee={detailsEmployee}
-        onClose={() => setDetailsEmployee(null)}
-      />
+      {dialogState?.intent === 'inspect' && (
+        <EmployeeDialog
+          open
+          intent="inspect"
+          employee={dialogState.employee}
+          onClose={() => setDialogState(null)}
+          onSaved={(e) => {
+            setStatus({ severity: 'success', message: `Updated ${e.firstName} ${e.lastName}` });
+            refresh();
+            setDialogState({ intent: 'inspect', employee: e });
+          }}
+        />
+      )}
     </Stack>
   );
 }

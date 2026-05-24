@@ -6,20 +6,22 @@ import type { Employee } from '@app/shared';
 
 jest.mock('../api/employees');
 
-jest.mock('../components/AddEmployeeModal', () => ({
-  AddEmployeeModal: ({
-    open,
-    onCreated,
-  }: {
+jest.mock('../components/EmployeeDialog', () => ({
+  EmployeeDialog: (props: {
     open: boolean;
-    onCreated: (e: { id: number; firstName: string; lastName: string }) => void;
+    intent: 'create' | 'inspect';
+    employee?: { id: number; firstName: string; lastName: string; email: string };
+    onSaved: (e: { id: number; firstName: string; lastName: string }) => void;
   }) =>
-    open ? (
-      <div data-testid="mock-modal">
+    props.open ? (
+      <div data-testid={`mock-dialog-${props.intent}`}>
+        {props.intent === 'inspect' && props.employee && (
+          <span data-testid="inspect-name">{props.employee.firstName} {props.employee.lastName}</span>
+        )}
         <button
-          onClick={() => onCreated({ id: 1, firstName: 'Asha', lastName: 'Rao' })}
+          onClick={() => props.onSaved({ id: 1, firstName: 'Asha', lastName: 'Rao' })}
         >
-          fire onCreated
+          fire onSaved
         </button>
       </div>
     ) : null,
@@ -70,18 +72,18 @@ describe('EmployeesPage', () => {
     expect(await screen.findByText('Failed to load employees')).toBeInTheDocument();
   });
 
-  it('clicking the top-right "Add Employee" opens the modal', async () => {
+  it('clicking the top-right "Add Employee" opens the dialog in create intent', async () => {
     mockedList.mockResolvedValueOnce({ rows: [fakeRow], total: 1 });
     const user = userEvent.setup();
 
     render(<EmployeesPage />);
 
     await waitFor(() => expect(screen.getByText('Asha Rao')).toBeInTheDocument());
-    expect(screen.queryByTestId('mock-modal')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('mock-dialog-create')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Add Employee' }));
 
-    expect(screen.getByTestId('mock-modal')).toBeInTheDocument();
+    expect(screen.getByTestId('mock-dialog-create')).toBeInTheDocument();
   });
 
   it('shows an empty-state CTA (no grid) when there are no employees', async () => {
@@ -93,7 +95,7 @@ describe('EmployeesPage', () => {
     expect(screen.queryByRole('columnheader', { name: 'Name' })).not.toBeInTheDocument();
   });
 
-  it('the empty-state Add Employee button opens the modal', async () => {
+  it('the empty-state Add Employee button opens the create dialog', async () => {
     const user = userEvent.setup();
 
     render(<EmployeesPage />);
@@ -101,7 +103,7 @@ describe('EmployeesPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Add Employee' }));
 
-    expect(screen.getByTestId('mock-modal')).toBeInTheDocument();
+    expect(screen.getByTestId('mock-dialog-create')).toBeInTheDocument();
   });
 
   it('hides the empty state once rows arrive', async () => {
@@ -113,7 +115,7 @@ describe('EmployeesPage', () => {
     expect(screen.queryByText('No employees yet')).not.toBeInTheDocument();
   });
 
-  it('onCreated flow shows a success Alert and refetches the grid', async () => {
+  it('create onSaved shows a success Alert and refetches the grid', async () => {
     const user = userEvent.setup();
 
     render(<EmployeesPage />);
@@ -121,14 +123,14 @@ describe('EmployeesPage', () => {
     await waitFor(() => expect(mockedList).toHaveBeenCalledTimes(1));
 
     await user.click(screen.getByRole('button', { name: 'Add Employee' }));
-    await user.click(screen.getByRole('button', { name: 'fire onCreated' }));
+    await user.click(screen.getByRole('button', { name: 'fire onSaved' }));
 
     expect(await screen.findByText('Added Asha Rao')).toBeInTheDocument();
-    expect(screen.queryByTestId('mock-modal')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('mock-dialog-create')).not.toBeInTheDocument();
     await waitFor(() => expect(mockedList).toHaveBeenCalledTimes(2));
   });
 
-  it('clicking the row View button opens the details modal with full info', async () => {
+  it('clicking the row View button opens the dialog in inspect intent with the row', async () => {
     mockedList.mockResolvedValueOnce({ rows: [fakeRow], total: 1 });
     const user = userEvent.setup();
 
@@ -138,15 +140,23 @@ describe('EmployeesPage', () => {
 
     await user.click(screen.getByRole('button', { name: /View .*Asha Rao/i }));
 
-    expect(await screen.findByRole('dialog', { name: /Employee details/i })).toBeInTheDocument();
-    expect(screen.getByText('asha@example.com')).toBeInTheDocument();
-    expect(screen.getByText('Software Engineer')).toBeInTheDocument();
-    expect(screen.getByText('Engineering')).toBeInTheDocument();
+    expect(await screen.findByTestId('mock-dialog-inspect')).toBeInTheDocument();
+    expect(screen.getByTestId('inspect-name')).toHaveTextContent('Asha Rao');
+  });
 
-    await user.click(screen.getByRole('button', { name: 'Close' }));
-    await waitFor(() =>
-      expect(screen.queryByRole('dialog', { name: /Employee details/i })).not.toBeInTheDocument(),
-    );
+  it('inspect onSaved (update) shows a success Alert and refetches the grid', async () => {
+    mockedList.mockResolvedValueOnce({ rows: [fakeRow], total: 1 });
+    const user = userEvent.setup();
+
+    render(<EmployeesPage />);
+
+    await waitFor(() => expect(screen.getByText('Asha Rao')).toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: /View .*Asha Rao/i }));
+    await user.click(screen.getByRole('button', { name: 'fire onSaved' }));
+
+    expect(await screen.findByText('Updated Asha Rao')).toBeInTheDocument();
+    await waitFor(() => expect(mockedList).toHaveBeenCalledTimes(2));
   });
 
   it('shows a search input when there are rows', async () => {
