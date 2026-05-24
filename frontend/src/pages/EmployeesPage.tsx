@@ -21,6 +21,8 @@ export function EmployeesPage() {
 
   const { data, isLoading, error, refresh } = useEmployeesList(page, pageSize);
 
+  const isEmpty = !isLoading && !error && data.total === 0;
+
   const columns: GridColDef<Employee>[] = [
     {
       field: 'fullName',
@@ -76,34 +78,50 @@ export function EmployeesPage() {
         </Alert>
       )}
 
-      <Stack direction="row" justifyContent="flex-end">
-        <Button variant="contained" onClick={() => setOpen(true)}>
-          Add Employee
-        </Button>
-      </Stack>
+      {!isEmpty && (
+        <Stack direction="row" justifyContent="flex-end">
+          <Button variant="contained" onClick={() => setOpen(true)}>
+            Add Employee
+          </Button>
+        </Stack>
+      )}
 
       {error && <Alert severity="error">{error}</Alert>}
 
-      <Box sx={{ height: 640 }}>
-        <DataGrid
-          rows={data.rows}
-          rowCount={data.total}
-          columns={columns}
-          getRowId={(row) => row.id}
-          paginationMode="server"
-          paginationModel={{ page, pageSize }}
-          onPaginationModelChange={(m) => {
-            setPage(m.page);
-            setPageSize(m.pageSize);
-          }}
-          pageSizeOptions={[25, 50, 100]}
-          loading={isLoading}
-          disableColumnFilter
-          disableColumnSorting
-          disableColumnMenu
-          disableRowSelectionOnClick
-        />
-      </Box>
+      {isEmpty ? (
+        <Stack spacing={2} alignItems="center" sx={{ py: 10 }}>
+          <Typography variant="h6" color="text.secondary">
+            No employees yet
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Add your first employee to get started.
+          </Typography>
+          <Button variant="contained" onClick={() => setOpen(true)}>
+            Add Employee
+          </Button>
+        </Stack>
+      ) : (
+        <Box sx={{ height: 640 }}>
+          <DataGrid
+            rows={data.rows}
+            rowCount={data.total}
+            columns={columns}
+            getRowId={(row) => row.id}
+            paginationMode="server"
+            paginationModel={{ page, pageSize }}
+            onPaginationModelChange={(m) => {
+              setPage(m.page);
+              setPageSize(m.pageSize);
+            }}
+            pageSizeOptions={[25, 50, 100]}
+            loading={isLoading}
+            disableColumnFilter
+            disableColumnSorting
+            disableColumnMenu
+            disableRowSelectionOnClick
+          />
+        </Box>
+      )}
 
       <AddEmployeeModal
         open={open}

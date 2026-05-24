@@ -70,16 +70,47 @@ describe('EmployeesPage', () => {
     expect(await screen.findByText('Failed to load employees')).toBeInTheDocument();
   });
 
-  it('clicking "Add Employee" opens the modal', async () => {
+  it('clicking the top-right "Add Employee" opens the modal', async () => {
+    mockedList.mockResolvedValueOnce({ rows: [fakeRow], total: 1 });
     const user = userEvent.setup();
 
     render(<EmployeesPage />);
 
+    await waitFor(() => expect(screen.getByText('Asha Rao')).toBeInTheDocument());
     expect(screen.queryByTestId('mock-modal')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Add Employee' }));
 
     expect(screen.getByTestId('mock-modal')).toBeInTheDocument();
+  });
+
+  it('shows an empty-state CTA (no grid) when there are no employees', async () => {
+    // default mock returns { rows: [], total: 0 }
+    render(<EmployeesPage />);
+
+    expect(await screen.findByText('No employees yet')).toBeInTheDocument();
+    expect(screen.getByText(/Add your first employee to get started/i)).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Name' })).not.toBeInTheDocument();
+  });
+
+  it('the empty-state Add Employee button opens the modal', async () => {
+    const user = userEvent.setup();
+
+    render(<EmployeesPage />);
+    await screen.findByText('No employees yet');
+
+    await user.click(screen.getByRole('button', { name: 'Add Employee' }));
+
+    expect(screen.getByTestId('mock-modal')).toBeInTheDocument();
+  });
+
+  it('hides the empty state once rows arrive', async () => {
+    mockedList.mockResolvedValueOnce({ rows: [fakeRow], total: 1 });
+
+    render(<EmployeesPage />);
+
+    await waitFor(() => expect(screen.getByText('Asha Rao')).toBeInTheDocument());
+    expect(screen.queryByText('No employees yet')).not.toBeInTheDocument();
   });
 
   it('onCreated flow shows a success Alert and refetches the grid', async () => {

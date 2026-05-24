@@ -262,8 +262,8 @@ In display order: **Name** (firstName + lastName combined via `valueGetter`), **
 ### Three explicit states
 
 - **Loading:** `<DataGrid loading={isLoading}>` — built-in overlay. No separate skeleton.
-- **Empty:** `data.rows.length === 0 && !isLoading` → DataGrid's default "No rows" overlay. Acceptable for an MVP; we don't customize.
-- **Error:** `<Alert severity="error">` above the grid; the grid still renders (with whatever `data` was last fetched, or empty on first load).
+- **Empty:** `!isLoading && !error && data.total === 0` → the grid and the top-right Add button are hidden; a centered first-run CTA appears (heading "No employees yet", subtext "Add your first employee to get started.", primary Add Employee button). Friendlier than an empty table shell with column headers and a "No rows" overlay.
+- **Error:** `<Alert severity="error">` above the grid; the grid still renders (with whatever `data` was last fetched, or empty on first load). Empty-state CTA is suppressed under error since the count is unknown.
 
 ### Post-create refresh
 
