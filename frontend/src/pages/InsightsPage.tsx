@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Stack, Typography } from '@mui/material';
+import { Box, Stack, Typography } from '@mui/material';
 import { CountrySelector } from '../components/CountrySelector';
 import { CountryInsightsCard } from '../components/CountryInsightsCard';
 
@@ -10,7 +10,9 @@ export function InsightsPage() {
     <Stack spacing={3}>
       <Typography variant="h4">Insights</Typography>
 
-      <CountrySelector value={country} onChange={setCountry} />
+      <Box sx={{ maxWidth: 320 }}>
+        <CountrySelector value={country} onChange={setCountry} />
+      </Box>
 
       {country === null ? (
         <Typography variant="body1" color="text.secondary">

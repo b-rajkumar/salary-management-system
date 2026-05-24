@@ -58,13 +58,15 @@ describe('CountryInsightsCard', () => {
     expect(heading.textContent).toMatch(/₹|INR/);
   });
 
-  test('renders min and max as supporting captions', () => {
+  test('renders min and max as a single "Range" line under mean salary', () => {
     spy.mockReturnValue({ result: { kind: 'ok', data: successData }, isLoading: false, error: null });
 
     render(<CountryInsightsCard country="IN" />);
 
-    expect(screen.getByText(/^Min/i).textContent?.replace(/\D/g, '')).toBe('600000');
-    expect(screen.getByText(/^Max/i).textContent?.replace(/\D/g, '')).toBe('4500000');
+    const range = screen.getByText(/^Range:/i);
+
+    // Numeric content of the line is min and max, in order, with separators stripped.
+    expect(range.textContent?.replace(/\D/g, '')).toBe('6000004500000');
   });
 
   test('renders the headcount, avg tenure and new-hires stats', () => {
@@ -73,7 +75,7 @@ describe('CountryInsightsCard', () => {
     render(<CountryInsightsCard country="IN" />);
 
     expect(screen.getByText('312')).toBeInTheDocument();
-    expect(screen.getByText(/3\.4/)).toBeInTheDocument();
+    expect(screen.getByText(/3\.4 yr/)).toBeInTheDocument();
     expect(screen.getByText('47')).toBeInTheDocument();
   });
 
