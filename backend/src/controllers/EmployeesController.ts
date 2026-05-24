@@ -58,4 +58,16 @@ export class EmployeesController {
 
     res.status(200).json(employee);
   }
+
+  async remove(req: Request, res: Response): Promise<void> {
+    const parsed = idParamSchema.safeParse(req.params);
+
+    if (!parsed.success) {
+      throw new ValidationError(parsed.error.flatten());
+    }
+
+    await this.service.remove(parsed.data.id);
+
+    res.status(204).send();
+  }
 }

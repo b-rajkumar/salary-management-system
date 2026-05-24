@@ -1,4 +1,5 @@
-import { updateEmployee } from './employees';
+import { deleteEmployee, updateEmployee } from './employees';
+import { ApiError } from './client';
 import type { Employee, EmployeeUpdateInput } from '@app/shared';
 
 const fakeEmployee: Employee = {
@@ -54,5 +55,45 @@ describe('updateEmployee', () => {
       }),
     );
     expect(result).toEqual(fakeEmployee);
+  });
+});
+
+describe('deleteEmployee', () => {
+  const originalFetch = global.fetch;
+  let fetchMock: jest.Mock;
+
+  beforeEach(() => {
+    fetchMock = jest.fn();
+    global.fetch = fetchMock as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  test('DELETEs /api/employees/:id and resolves on 204', async () => {
+    fetchMock.mockResolvedValue({ ok: true, status: 204, json: async () => null });
+
+    await expect(deleteEmployee(7)).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/employees/7',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+  });
+
+  test('throws ApiError on 404 with the parsed body code/message', async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 404,
+      statusText: 'Not Found',
+      json: async () => ({ error: { code: 'EMPLOYEE_NOT_FOUND', message: 'Employee 999 not found' } }),
+    });
+
+    await expect(deleteEmployee(999)).rejects.toMatchObject({
+      constructor: ApiError,
+      status: 404,
+      code: 'EMPLOYEE_NOT_FOUND',
+      message: 'Employee 999 not found',
+    });
   });
 });

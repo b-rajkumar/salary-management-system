@@ -22,4 +22,12 @@ export class EmployeesService {
 
     return row;
   }
+
+  async remove(id: number): Promise<void> {
+    const deleted = await this.repo.delete(id);
+
+    if (!deleted) {
+      throw new NotFoundError('EMPLOYEE_NOT_FOUND', `Employee ${id} not found`);
+    }
+  }
 }

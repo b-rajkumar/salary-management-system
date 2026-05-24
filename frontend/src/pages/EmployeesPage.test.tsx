@@ -1,7 +1,8 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EmployeesPage } from './EmployeesPage';
-import { listEmployees } from '../api/employees';
+import { deleteEmployee, listEmployees } from '../api/employees';
+import { ApiError } from '../api/client';
 import type { Employee } from '@app/shared';
 
 jest.mock('../api/employees');
@@ -10,24 +11,32 @@ jest.mock('../components/EmployeeDialog', () => ({
   EmployeeDialog: (props: {
     open: boolean;
     intent: 'create' | 'inspect';
-    employee?: { id: number; firstName: string; lastName: string; email: string };
-    onSaved: (e: { id: number; firstName: string; lastName: string }) => void;
+    employee?: Employee;
+    startInEditMode?: boolean;
+    onSaved: (e: Employee) => void;
+    onDelete?: (e: Employee) => void;
   }) =>
     props.open ? (
-      <div data-testid={`mock-dialog-${props.intent}`}>
+      <div data-testid={`mock-dialog-${props.intent}${props.startInEditMode ? '-edit' : ''}`}>
         {props.intent === 'inspect' && props.employee && (
           <span data-testid="inspect-name">{props.employee.firstName} {props.employee.lastName}</span>
         )}
-        <button
-          onClick={() => props.onSaved({ id: 1, firstName: 'Asha', lastName: 'Rao' })}
-        >
+        <button onClick={() => props.onSaved(props.employee ?? fakeRow)}>
           fire onSaved
         </button>
+        {props.onDelete && props.employee && (
+          <button onClick={() => props.onDelete!(props.employee!)}>fire onDelete</button>
+        )}
       </div>
     ) : null,
 }));
 
 const mockedList = jest.mocked(listEmployees);
+const mockedDelete = jest.mocked(deleteEmployee);
+
+async function openRowMenu(user: ReturnType<typeof userEvent.setup>, fullName: string) {
+  await user.click(screen.getByRole('button', { name: `Actions for ${fullName}` }));
+}
 
 const fakeRow: Employee = {
   id: 1,
@@ -46,6 +55,7 @@ const fakeRow: Employee = {
 beforeEach(() => {
   jest.clearAllMocks();
   mockedList.mockResolvedValue({ rows: [], total: 0 });
+  mockedDelete.mockResolvedValue(undefined);
 });
 
 describe('EmployeesPage', () => {
@@ -130,7 +140,7 @@ describe('EmployeesPage', () => {
     await waitFor(() => expect(mockedList).toHaveBeenCalledTimes(2));
   });
 
-  it('clicking the row View button opens the dialog in inspect intent with the row', async () => {
+  it('kebab View opens the dialog in inspect intent with the row', async () => {
     mockedList.mockResolvedValueOnce({ rows: [fakeRow], total: 1 });
     const user = userEvent.setup();
 
@@ -138,10 +148,25 @@ describe('EmployeesPage', () => {
 
     await waitFor(() => expect(screen.getByText('Asha Rao')).toBeInTheDocument());
 
-    await user.click(screen.getByRole('button', { name: /View .*Asha Rao/i }));
+    await openRowMenu(user, 'Asha Rao');
+    await user.click(screen.getByRole('menuitem', { name: 'View' }));
 
     expect(await screen.findByTestId('mock-dialog-inspect')).toBeInTheDocument();
     expect(screen.getByTestId('inspect-name')).toHaveTextContent('Asha Rao');
+  });
+
+  it('kebab Edit opens the dialog directly in edit mode', async () => {
+    mockedList.mockResolvedValueOnce({ rows: [fakeRow], total: 1 });
+    const user = userEvent.setup();
+
+    render(<EmployeesPage />);
+
+    await waitFor(() => expect(screen.getByText('Asha Rao')).toBeInTheDocument());
+
+    await openRowMenu(user, 'Asha Rao');
+    await user.click(screen.getByRole('menuitem', { name: 'Edit' }));
+
+    expect(await screen.findByTestId('mock-dialog-inspect-edit')).toBeInTheDocument();
   });
 
   it('inspect onSaved (update) shows a success Alert and refetches the grid', async () => {
@@ -152,11 +177,77 @@ describe('EmployeesPage', () => {
 
     await waitFor(() => expect(screen.getByText('Asha Rao')).toBeInTheDocument());
 
-    await user.click(screen.getByRole('button', { name: /View .*Asha Rao/i }));
+    await openRowMenu(user, 'Asha Rao');
+    await user.click(screen.getByRole('menuitem', { name: 'View' }));
     await user.click(screen.getByRole('button', { name: 'fire onSaved' }));
 
     expect(await screen.findByText('Updated Asha Rao')).toBeInTheDocument();
     await waitFor(() => expect(mockedList).toHaveBeenCalledTimes(2));
+  });
+
+  it('kebab Delete opens the confirm dialog showing name, email, and country', async () => {
+    mockedList.mockResolvedValueOnce({ rows: [fakeRow], total: 1 });
+    const user = userEvent.setup();
+
+    render(<EmployeesPage />);
+
+    await waitFor(() => expect(screen.getByText('Asha Rao')).toBeInTheDocument());
+
+    await openRowMenu(user, 'Asha Rao');
+    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
+
+    expect(await screen.findByText('Delete employee?')).toBeInTheDocument();
+    expect(screen.getByText(/asha@example\.com/)).toBeInTheDocument();
+    expect(screen.getByText(/IN/)).toBeInTheDocument();
+  });
+
+  it('confirming a delete calls deleteEmployee, shows the snackbar, and refetches', async () => {
+    mockedList.mockResolvedValueOnce({ rows: [fakeRow], total: 1 });
+    const user = userEvent.setup();
+
+    render(<EmployeesPage />);
+
+    await waitFor(() => expect(screen.getByText('Asha Rao')).toBeInTheDocument());
+
+    await openRowMenu(user, 'Asha Rao');
+    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => expect(mockedDelete).toHaveBeenCalledWith(fakeRow.id));
+    expect(await screen.findByText('Employee deleted')).toBeInTheDocument();
+    await waitFor(() => expect(mockedList).toHaveBeenCalledTimes(2));
+  });
+
+  it('404 from deleteEmployee surfaces "Employee already deleted" and still refetches', async () => {
+    mockedList.mockResolvedValueOnce({ rows: [fakeRow], total: 1 });
+    mockedDelete.mockRejectedValueOnce(new ApiError(404, 'EMPLOYEE_NOT_FOUND', 'Employee 1 not found'));
+    const user = userEvent.setup();
+
+    render(<EmployeesPage />);
+
+    await waitFor(() => expect(screen.getByText('Asha Rao')).toBeInTheDocument());
+
+    await openRowMenu(user, 'Asha Rao');
+    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+
+    expect(await screen.findByText('Employee already deleted')).toBeInTheDocument();
+    await waitFor(() => expect(mockedList).toHaveBeenCalledTimes(2));
+  });
+
+  it('dialog footer Delete (onDelete from inspect) opens the same confirm', async () => {
+    mockedList.mockResolvedValueOnce({ rows: [fakeRow], total: 1 });
+    const user = userEvent.setup();
+
+    render(<EmployeesPage />);
+
+    await waitFor(() => expect(screen.getByText('Asha Rao')).toBeInTheDocument());
+
+    await openRowMenu(user, 'Asha Rao');
+    await user.click(screen.getByRole('menuitem', { name: 'View' }));
+    await user.click(screen.getByRole('button', { name: 'fire onDelete' }));
+
+    expect(await screen.findByText('Delete employee?')).toBeInTheDocument();
   });
 
   it('shows a search input when there are rows', async () => {

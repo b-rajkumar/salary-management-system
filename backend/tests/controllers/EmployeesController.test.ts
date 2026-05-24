@@ -205,3 +205,47 @@ describe('PUT /api/employees/:id', () => {
     expect(res.body.error).toMatchObject({ code: 'EMAIL_TAKEN' });
   });
 });
+
+describe('DELETE /api/employees/:id', () => {
+  let service: { create: jest.Mock; list: jest.Mock; update: jest.Mock; remove: jest.Mock };
+  let app: Express;
+
+  beforeEach(() => {
+    service = {
+      create: jest.fn(),
+      list: jest.fn(),
+      update: jest.fn(),
+      remove: jest.fn().mockResolvedValue(undefined),
+    };
+    const controller = new EmployeesController(service as unknown as EmployeesService);
+
+    app = express();
+    app.use(express.json());
+    app.use('/api/employees', employeesRouter(controller));
+    app.use(errorMiddleware);
+  });
+
+  test('204 with no body and calls service.remove with the id', async () => {
+    const res = await request(app).delete('/api/employees/1');
+
+    expect(res.status).toBe(204);
+    expect(res.body).toEqual({});
+    expect(service.remove).toHaveBeenCalledWith(1);
+  });
+
+  test('400 VALIDATION_ERROR when :id is not a positive integer', async () => {
+    const res = await request(app).delete('/api/employees/abc');
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(service.remove).not.toHaveBeenCalled();
+  });
+
+  test('404 EMPLOYEE_NOT_FOUND when service throws NotFoundError', async () => {
+    service.remove.mockRejectedValueOnce(new NotFoundError('EMPLOYEE_NOT_FOUND', 'Employee 999 not found'));
+    const res = await request(app).delete('/api/employees/999');
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('EMPLOYEE_NOT_FOUND');
+  });
+});

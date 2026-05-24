@@ -163,6 +163,8 @@ REST under `/api`. All responses JSON. Validation via Zod at every input boundar
 
 **`PUT /api/employees/:id`** — same body as `POST /api/employees`. Returns the updated row (`200 Employee`). Validation errors → `400`; unknown id → `404 EMPLOYEE_NOT_FOUND`; email collision with another row → `409 EMAIL_TAKEN`. `updatedAt` is set server-side at the repository layer (`new Date().toISOString()`) on every update; the value in the request body, if any, is ignored.
 
+**`DELETE /api/employees/:id`** — no body. Returns `204 No Content` on success. Validation errors on the `:id` param → `400`; unknown id → `404 EMPLOYEE_NOT_FOUND`. No cascade or referential-integrity concerns — `employees` is the only table.
+
 ### Insights
 
 | Method | Path                                                  | Purpose |

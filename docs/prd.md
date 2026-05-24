@@ -60,7 +60,7 @@ The HR Manager can edit any field on an existing employee record from a unified 
 The Save button is disabled while the form is pristine. The system maintains a server-side `updatedAt` timestamp on every save; it is shown alongside `createdAt` in the dialog's view mode.
 
 ### FR-4 — Delete an employee
-The HR Manager can delete an employee record. The system confirms the action before deleting. Deletion is permanent (see "Assumptions").
+The HR Manager can delete any employee record. Each row in the employee grid has a kebab menu (View / Edit / Delete); a Delete button also appears in the unified employee dialog's view-mode footer (Close | Delete | Edit). Both entry points open the same confirm modal showing the employee's name, email, and country code (e.g. "Delete Asha Rao (asha@example.com, IN)? This cannot be undone."). On confirmation a snackbar reports "Employee deleted" and the grid refetches. Deletion is permanent (see §7 Assumptions); there is no audit log and no undo. If the row is already gone (race / repeated click), the UI treats the resulting 404 as success and surfaces "Employee already deleted."
 
 ### FR-5 — Country salary insights
 The HR Manager can select a country and see the minimum, maximum, and average salary of employees in that country, expressed in that country's local currency. If the country has no employees, the system says so.

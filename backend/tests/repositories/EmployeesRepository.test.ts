@@ -275,4 +275,24 @@ describe('EmployeesRepository', () => {
       expect(updated!.email).toBe(input.email);
     });
   });
+
+  describe('delete', () => {
+    test('removes the row and returns true', async () => {
+      const created = await repo.insert(input);
+
+      const result = await repo.delete(created.id);
+
+      expect(result).toBe(true);
+
+      const after = await repo.list({ page: 0, pageSize: 50 });
+
+      expect(after.total).toBe(0);
+    });
+
+    test('returns false when no row matches the id', async () => {
+      const result = await repo.delete(999);
+
+      expect(result).toBe(false);
+    });
+  });
 });

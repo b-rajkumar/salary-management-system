@@ -6,6 +6,7 @@ import {
   MenuItem, InputAdornment, Alert, CircularProgress,
   Box, Typography, Divider,
 } from '@mui/material';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import {
   employeeCreateSchema, COUNTRIES,
   type Employee, type EmployeeCreateInput, type EmployeeUpdateInput, type CountryCode,
@@ -55,8 +56,10 @@ type Props =
       open: boolean;
       intent: 'inspect';
       employee: Employee;
+      startInEditMode?: boolean;
       onClose: () => void;
       onSaved: (e: Employee) => void;
+      onDelete: (e: Employee) => void;
     };
 
 export function EmployeeDialog(props: Props) {
@@ -109,9 +112,9 @@ function ViewBody({ employee }: { employee: Employee }) {
 }
 
 function InspectDialog({
-  open, employee, onClose, onSaved,
+  open, employee, startInEditMode, onClose, onSaved, onDelete,
 }: Extract<Props, { intent: 'inspect' }>) {
-  const [mode, setMode] = useState<'view' | 'edit'>('view');
+  const [mode, setMode] = useState<'view' | 'edit'>(startInEditMode ? 'edit' : 'view');
   const [current, setCurrent] = useState<Employee>(employee);
   const initialValues = toFormValues(current);
 
@@ -179,6 +182,10 @@ function InspectDialog({
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose}>Close</Button>
+          <Box sx={{ flex: 1 }} />
+          <Button color="error" startIcon={<DeleteOutlineIcon />} onClick={() => onDelete(current)}>
+            Delete
+          </Button>
           <Button variant="contained" onClick={enterEdit}>Edit</Button>
         </DialogActions>
       </Dialog>

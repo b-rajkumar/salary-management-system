@@ -17,6 +17,10 @@ export function updateEmployee(id: number, input: EmployeeUpdateInput): Promise<
   });
 }
 
+export function deleteEmployee(id: number): Promise<void> {
+  return request<void>(`/api/employees/${id}`, { method: 'DELETE' });
+}
+
 export function listEmployees(params: {
   page: number;
   pageSize: number;

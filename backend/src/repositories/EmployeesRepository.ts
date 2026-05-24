@@ -72,6 +72,15 @@ export class EmployeesRepository {
     return { rows, total: Number(countRow.total) };
   }
 
+  async delete(id: number): Promise<boolean> {
+    const result = await this.db
+      .deleteFrom('employees')
+      .where('id', '=', id)
+      .executeTakeFirst();
+
+    return Number(result.numDeletedRows) === 1;
+  }
+
   async update(id: number, input: EmployeeCreateInput): Promise<Employee | null> {
     const updatedAt = new Date().toISOString();
 

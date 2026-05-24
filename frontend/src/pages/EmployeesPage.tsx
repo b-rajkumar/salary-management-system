@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Stack, Typography, Button, Alert, Box, TextField } from '@mui/material';
+import { Stack, Typography, Button, Alert, Box, TextField, Snackbar } from '@mui/material';
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import { COUNTRIES, type Employee } from '@app/shared';
 import { EmployeeDialog } from '../components/EmployeeDialog';
+import { RowActions } from '../components/RowActions';
+import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog';
 import { SalaryCell } from '../components/SalaryCell';
+import { ApiError } from '../api/client';
+import { deleteEmployee } from '../api/employees';
 import { useEmployeesList } from '../hooks/useEmployeesList';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 
@@ -14,11 +18,13 @@ interface Status {
 
 type DialogState =
   | { intent: 'create' }
-  | { intent: 'inspect'; employee: Employee }
+  | { intent: 'inspect'; employee: Employee; startInEditMode?: boolean }
   | null;
 
 export function EmployeesPage() {
   const [dialogState, setDialogState] = useState<DialogState>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
+  const [snackbar, setSnackbar] = useState<string | null>(null);
   const [status, setStatus] = useState<Status | null>(null);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(50);
@@ -64,18 +70,17 @@ export function EmployeesPage() {
     {
       field: 'actions',
       headerName: '',
-      flex: 0.6,
+      flex: 0.4,
       sortable: false,
       filterable: false,
       disableColumnMenu: true,
       renderCell: (params) => (
-        <Button
-          size="small"
-          onClick={() => setDialogState({ intent: 'inspect', employee: params.row })}
-          aria-label={`View ${params.row.firstName} ${params.row.lastName}`}
-        >
-          View
-        </Button>
+        <RowActions
+          employee={params.row}
+          onView={(e) => setDialogState({ intent: 'inspect', employee: e })}
+          onEdit={(e) => setDialogState({ intent: 'inspect', employee: e, startInEditMode: true })}
+          onDelete={(e) => setDeleteTarget(e)}
+        />
       ),
     },
   ];
@@ -174,14 +179,51 @@ export function EmployeesPage() {
           open
           intent="inspect"
           employee={dialogState.employee}
+          startInEditMode={dialogState.startInEditMode}
           onClose={() => setDialogState(null)}
           onSaved={(e) => {
             setStatus({ severity: 'success', message: `Updated ${e.firstName} ${e.lastName}` });
             refresh();
             setDialogState({ intent: 'inspect', employee: e });
           }}
+          onDelete={(e) => setDeleteTarget(e)}
         />
       )}
+
+      <DeleteConfirmDialog
+        open={Boolean(deleteTarget)}
+        employee={deleteTarget}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={async () => {
+          if (!deleteTarget) {return;}
+          try {
+            await deleteEmployee(deleteTarget.id);
+            setSnackbar('Employee deleted');
+          } catch (err) {
+            if (err instanceof ApiError && err.status === 404) {
+              setSnackbar('Employee already deleted');
+            } else {
+              throw err;
+            }
+          }
+          if (dialogState?.intent === 'inspect' && dialogState.employee.id === deleteTarget.id) {
+            setDialogState(null);
+          }
+          setDeleteTarget(null);
+          if (data.rows.length === 1 && page > 0) {
+            setPage(page - 1);
+          } else {
+            refresh();
+          }
+        }}
+      />
+
+      <Snackbar
+        open={Boolean(snackbar)}
+        message={snackbar ?? ''}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar(null)}
+      />
     </Stack>
   );
 }

@@ -16,5 +16,9 @@ export function employeesRouter(controller: EmployeesController): Router {
     controller.update(req, res).catch(next);
   });
 
+  r.delete('/:id', (req, res, next) => {
+    controller.remove(req, res).catch(next);
+  });
+
   return r;
 }

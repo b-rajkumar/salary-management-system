@@ -98,6 +98,7 @@ describe('EmployeeDialog — view mode', () => {
         employee={fakeEmployee}
         onClose={jest.fn()}
         onSaved={jest.fn()}
+        onDelete={jest.fn()}
       />,
     );
 
@@ -120,7 +121,7 @@ describe('EmployeeDialog — view mode', () => {
     };
 
     render(
-      <EmployeeDialog open intent="inspect" employee={employee} onClose={jest.fn()} onSaved={jest.fn()} />,
+      <EmployeeDialog open intent="inspect" employee={employee} onClose={jest.fn()} onSaved={jest.fn()} onDelete={jest.fn()} />,
     );
 
     expect(screen.getByText('2024-01-15 09:12:00')).toBeInTheDocument();
@@ -129,7 +130,7 @@ describe('EmployeeDialog — view mode', () => {
     expect(screen.queryByText('2026-05-24T14:32:15.123Z')).not.toBeInTheDocument();
   });
 
-  it('shows Close and Edit buttons (no Cancel / Save in view mode)', () => {
+  it('shows Close, Delete, and Edit buttons (no Cancel / Save in view mode)', () => {
     render(
       <EmployeeDialog
         open
@@ -137,10 +138,12 @@ describe('EmployeeDialog — view mode', () => {
         employee={fakeEmployee}
         onClose={jest.fn()}
         onSaved={jest.fn()}
+        onDelete={jest.fn()}
       />,
     );
 
     expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
@@ -157,20 +160,83 @@ describe('EmployeeDialog — view mode', () => {
         employee={fakeEmployee}
         onClose={onClose}
         onSaved={jest.fn()}
+        onDelete={jest.fn()}
       />,
     );
 
     await user.click(screen.getByRole('button', { name: 'Close' }));
     expect(onClose).toHaveBeenCalled();
   });
+
+  it('shows a Delete button in view mode that fires onDelete with the current employee', async () => {
+    const user = userEvent.setup();
+    const onDelete = jest.fn();
+
+    render(
+      <EmployeeDialog
+        open
+        intent="inspect"
+        employee={fakeEmployee}
+        onClose={jest.fn()}
+        onSaved={jest.fn()}
+        onDelete={onDelete}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(onDelete).toHaveBeenCalledWith(fakeEmployee);
+  });
 });
 
 describe('EmployeeDialog — edit mode', () => {
+  it('does not show a Delete button in edit mode', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <EmployeeDialog
+        open
+        intent="inspect"
+        employee={fakeEmployee}
+        onClose={jest.fn()}
+        onSaved={jest.fn()}
+        onDelete={jest.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
+  });
+
+  it('startInEditMode: true mounts directly in edit mode (form fields visible)', () => {
+    render(
+      <EmployeeDialog
+        open
+        intent="inspect"
+        employee={fakeEmployee}
+        startInEditMode
+        onClose={jest.fn()}
+        onSaved={jest.fn()}
+        onDelete={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText('First name')).toHaveValue('Asha');
+    expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+  });
+
   it('clicking Edit reveals prefilled form inputs', async () => {
     const user = userEvent.setup();
 
     render(
-      <EmployeeDialog open intent="inspect" employee={fakeEmployee} onClose={jest.fn()} onSaved={jest.fn()} />,
+      <EmployeeDialog
+        open
+        intent="inspect"
+        employee={fakeEmployee}
+        onClose={jest.fn()}
+        onSaved={jest.fn()}
+        onDelete={jest.fn()}
+      />,
     );
 
     await user.click(screen.getByRole('button', { name: 'Edit' }));
@@ -184,7 +250,7 @@ describe('EmployeeDialog — edit mode', () => {
     const user = userEvent.setup();
 
     render(
-      <EmployeeDialog open intent="inspect" employee={fakeEmployee} onClose={jest.fn()} onSaved={jest.fn()} />,
+      <EmployeeDialog open intent="inspect" employee={fakeEmployee} onClose={jest.fn()} onSaved={jest.fn()} onDelete={jest.fn()} />,
     );
 
     await user.click(screen.getByRole('button', { name: 'Edit' }));
@@ -201,7 +267,7 @@ describe('EmployeeDialog — edit mode', () => {
     const user = userEvent.setup();
 
     render(
-      <EmployeeDialog open intent="inspect" employee={fakeEmployee} onClose={jest.fn()} onSaved={jest.fn()} />,
+      <EmployeeDialog open intent="inspect" employee={fakeEmployee} onClose={jest.fn()} onSaved={jest.fn()} onDelete={jest.fn()} />,
     );
 
     await user.click(screen.getByRole('button', { name: 'Edit' }));
@@ -221,7 +287,7 @@ describe('EmployeeDialog — edit mode', () => {
     const user = userEvent.setup();
 
     render(
-      <EmployeeDialog open intent="inspect" employee={fakeEmployee} onClose={jest.fn()} onSaved={onSaved} />,
+      <EmployeeDialog open intent="inspect" employee={fakeEmployee} onClose={jest.fn()} onSaved={onSaved} onDelete={jest.fn()} />,
     );
 
     await user.click(screen.getByRole('button', { name: 'Edit' }));
@@ -241,7 +307,7 @@ describe('EmployeeDialog — edit mode', () => {
     const user = userEvent.setup();
 
     render(
-      <EmployeeDialog open intent="inspect" employee={fakeEmployee} onClose={jest.fn()} onSaved={jest.fn()} />,
+      <EmployeeDialog open intent="inspect" employee={fakeEmployee} onClose={jest.fn()} onSaved={jest.fn()} onDelete={jest.fn()} />,
     );
 
     await user.click(screen.getByRole('button', { name: 'Edit' }));
@@ -257,7 +323,7 @@ describe('EmployeeDialog — edit mode', () => {
     const user = userEvent.setup();
 
     render(
-      <EmployeeDialog open intent="inspect" employee={fakeEmployee} onClose={jest.fn()} onSaved={jest.fn()} />,
+      <EmployeeDialog open intent="inspect" employee={fakeEmployee} onClose={jest.fn()} onSaved={jest.fn()} onDelete={jest.fn()} />,
     );
 
     await user.click(screen.getByRole('button', { name: 'Edit' }));
@@ -269,7 +335,7 @@ describe('EmployeeDialog — edit mode', () => {
     const user = userEvent.setup();
 
     render(
-      <EmployeeDialog open intent="inspect" employee={fakeEmployee} onClose={jest.fn()} onSaved={jest.fn()} />,
+      <EmployeeDialog open intent="inspect" employee={fakeEmployee} onClose={jest.fn()} onSaved={jest.fn()} onDelete={jest.fn()} />,
     );
 
     await user.click(screen.getByRole('button', { name: 'Edit' }));

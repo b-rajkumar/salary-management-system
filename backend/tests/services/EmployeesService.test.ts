@@ -14,11 +14,11 @@ const input = {
 };
 
 describe('EmployeesService', () => {
-  let repo: { insert: jest.Mock; list: jest.Mock; update: jest.Mock };
+  let repo: { insert: jest.Mock; list: jest.Mock; update: jest.Mock; delete: jest.Mock };
   let service: EmployeesService;
 
   beforeEach(() => {
-    repo = { insert: jest.fn(), list: jest.fn(), update: jest.fn() };
+    repo = { insert: jest.fn(), list: jest.fn(), update: jest.fn(), delete: jest.fn() };
     service = new EmployeesService(repo as unknown as EmployeesRepository);
   });
 
@@ -81,5 +81,21 @@ describe('EmployeesService', () => {
     repo.update.mockRejectedValue(new ConflictError('EMAIL_TAKEN', 'taken'));
 
     await expect(service.update(1, input)).rejects.toBeInstanceOf(ConflictError);
+  });
+
+  test('remove delegates to repo.delete and resolves when a row was removed', async () => {
+    repo.delete.mockResolvedValue(true);
+
+    await expect(service.remove(1)).resolves.toBeUndefined();
+    expect(repo.delete).toHaveBeenCalledWith(1);
+  });
+
+  test('remove throws NotFoundError when repo.delete returns false', async () => {
+    repo.delete.mockResolvedValue(false);
+
+    await expect(service.remove(999)).rejects.toMatchObject({
+      constructor: NotFoundError,
+      code: 'EMPLOYEE_NOT_FOUND',
+    });
   });
 });
