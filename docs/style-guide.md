@@ -2,11 +2,17 @@
 
 Concise rules. Anything not covered here defers to Prettier and the ESLint config at the repo root.
 
-What's automated:
-- **Prettier** — indentation, quotes, semicolons, trailing commas, line width.
-- **ESLint** — `padding-line-between-statements` enforces blank-line structure inside functions (run `npm run lint` or `npm run lint:fix`).
+What's automated (see `eslint.config.mjs` for the full set):
 
-Everything else is enforced by review.
+- **Prettier** — indentation, quotes, semicolons, trailing commas, line width.
+- **ESLint — structure**: blank line after a `const`/`let` group and before every `return`.
+- **ESLint — correctness**: strict equality (`===`), `no-var`, `prefer-const`, `no-throw-literal`, `no-duplicate-imports`, `no-implicit-coercion` (use `Boolean(x)` not `!!x`), `no-return-await`, `no-useless-concat`/`no-useless-rename`.
+- **ESLint — cleanliness**: `prefer-template` (no string concatenation), `object-shorthand`, `prefer-arrow-callback`, `arrow-body-style: as-needed`, `curly: all` (braces around every `if`/`else` body).
+- **ESLint — TypeScript**: `consistent-type-imports` (inline style: `import { type Foo }`), `consistent-type-definitions` (`interface` for object shapes), `no-inferrable-types`, `no-unused-vars` (prefix with `_` to escape), `no-explicit-any` (warn), `no-non-null-assertion` (warn).
+
+Tests get relaxed rules (no-explicit-any, no-non-null-assertion disabled) — mock plumbing makes those hard to avoid cleanly.
+
+Run `npm run lint` to check, `npm run lint:fix` to apply auto-fixes. Everything below this header that isn't on the list above is enforced by review.
 
 ---
 

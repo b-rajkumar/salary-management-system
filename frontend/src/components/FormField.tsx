@@ -25,7 +25,7 @@ export function FormField<T extends FieldValues>({
           {...field}
           label={label}
           fullWidth
-          error={!!fieldState.error}
+          error={Boolean(fieldState.error)}
           helperText={fieldState.error?.message ?? helperText}
         >
           {children}

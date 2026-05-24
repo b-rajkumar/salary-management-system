@@ -3,7 +3,7 @@ import { Stack, Typography, Button, Alert } from '@mui/material';
 import { AddEmployeeModal } from '../components/AddEmployeeModal';
 import type { Employee } from '@app/shared';
 
-type Status = { severity: 'success' | 'error'; message: string };
+interface Status { severity: 'success' | 'error'; message: string }
 
 export function EmployeesPage() {
   const [open, setOpen] = useState(false);

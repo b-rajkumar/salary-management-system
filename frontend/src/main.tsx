@@ -5,7 +5,13 @@ import { BrowserRouter } from 'react-router-dom';
 import { theme } from './theme';
 import { App } from './App';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const rootEl = document.getElementById('root');
+
+if (!rootEl) {
+  throw new Error('#root element not found in index.html');
+}
+
+ReactDOM.createRoot(rootEl).render(
   <React.StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline />

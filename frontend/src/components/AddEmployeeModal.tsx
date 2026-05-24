@@ -22,13 +22,13 @@ import { createEmployee } from '../api/employees';
 import { ApiError } from '../api/client';
 import { FormField } from './FormField';
 
-type Props = {
+interface Props {
   open: boolean;
   onClose: () => void;
   onCreated: (e: Employee) => void;
-};
+}
 
-type FormValues = {
+interface FormValues {
   firstName: string;
   lastName: string;
   email: string;
@@ -37,7 +37,7 @@ type FormValues = {
   country: CountryCode | '';
   salary: number | '';
   hireDate: string;
-};
+}
 
 const emptyDefaults: FormValues = {
   firstName: '', lastName: '', email: '', jobTitle: '', department: '',
@@ -74,7 +74,7 @@ export function AddEmployeeModal({ open, onClose, onCreated }: Props) {
   });
 
   const handleClose = () => {
-    if (formState.isSubmitting) return;
+    if (formState.isSubmitting) {return;}
     reset(emptyDefaults);
     setSubmitError(null);
     onClose();

@@ -17,7 +17,7 @@ export function migrate(db: Database.Database, migrationsDir: string): void {
   const files = fs.readdirSync(migrationsDir).filter((f) => f.endsWith('.sql')).sort();
 
   for (const file of files) {
-    if (applied.has(file)) continue;
+    if (applied.has(file)) {continue;}
     const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf-8');
     const record = db.prepare(`INSERT INTO _migrations (name) VALUES (?)`);
 
