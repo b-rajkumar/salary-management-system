@@ -11,3 +11,8 @@ export interface Employee {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface EmployeesListResponse {
+  rows: Employee[];
+  total: number;
+}
