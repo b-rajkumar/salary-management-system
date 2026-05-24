@@ -20,3 +20,23 @@ export interface EmployeesListResponse {
 }
 
 export type EmployeeUpdateInput = EmployeeCreateInput;
+
+export interface CountryInsightsResponse {
+  country: string;
+  currency: string;
+  count: number;
+  salary: {
+    min: number;
+    max: number;
+    avg: number;
+  };
+  tenure: {
+    avgYears: number;
+    newHiresLast12Months: number;
+  };
+  departments: Array<{
+    department: string;
+    headcount: number;
+    avgSalary: number;
+  }>;
+}
