@@ -1,13 +1,14 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EmployeeDialog } from './EmployeeDialog';
-import { createEmployee } from '../api/employees';
+import { createEmployee, updateEmployee } from '../api/employees';
 import { ApiError } from '../api/client';
 import type { Employee } from '@app/shared';
 
 jest.mock('../api/employees');
 
 const mockedCreate = jest.mocked(createEmployee);
+const mockedUpdate = jest.mocked(updateEmployee);
 
 const fakeEmployee: Employee = {
   id: 1,
@@ -142,5 +143,122 @@ describe('EmployeeDialog — view mode', () => {
 
     await user.click(screen.getByRole('button', { name: 'Close' }));
     expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe('EmployeeDialog — edit mode', () => {
+  it('clicking Edit reveals prefilled form inputs', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <EmployeeDialog open intent="inspect" employee={fakeEmployee} onClose={jest.fn()} onSaved={jest.fn()} />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+
+    expect(screen.getByLabelText('First name')).toHaveValue('Asha');
+    expect(screen.getByLabelText('Email')).toHaveValue('asha@example.com');
+    expect(screen.getByLabelText('Salary')).toHaveValue(1500000);
+  });
+
+  it('Save button is disabled while the form is pristine', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <EmployeeDialog open intent="inspect" employee={fakeEmployee} onClose={jest.fn()} onSaved={jest.fn()} />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+
+    await user.clear(screen.getByLabelText('First name'));
+    await user.type(screen.getByLabelText('First name'), 'Renamed');
+
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+  });
+
+  it('Cancel returns to view mode with original values', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <EmployeeDialog open intent="inspect" employee={fakeEmployee} onClose={jest.fn()} onSaved={jest.fn()} />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    await user.clear(screen.getByLabelText('First name'));
+    await user.type(screen.getByLabelText('First name'), 'Discarded');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.getByText('Asha Rao')).toBeInTheDocument();
+    expect(screen.queryByLabelText('First name')).not.toBeInTheDocument();
+  });
+
+  it('valid Save calls updateEmployee, transitions to view with updated row, fires onSaved', async () => {
+    const updated = { ...fakeEmployee, firstName: 'Asha-Updated', updatedAt: '2026-05-24T10:00:00.000Z' };
+
+    mockedUpdate.mockResolvedValueOnce(updated);
+    const onSaved = jest.fn();
+    const user = userEvent.setup();
+
+    render(
+      <EmployeeDialog open intent="inspect" employee={fakeEmployee} onClose={jest.fn()} onSaved={onSaved} />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    await user.clear(screen.getByLabelText('First name'));
+    await user.type(screen.getByLabelText('First name'), 'Asha-Updated');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await screen.findByText('Asha-Updated Rao');
+    expect(mockedUpdate).toHaveBeenCalledWith(
+      fakeEmployee.id,
+      expect.objectContaining({ firstName: 'Asha-Updated' }),
+    );
+    expect(onSaved).toHaveBeenCalledWith(updated);
+  });
+
+  it('changing country auto-clears salary and shows the re-enter helper', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <EmployeeDialog open intent="inspect" employee={fakeEmployee} onClose={jest.fn()} onSaved={jest.fn()} />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+
+    await user.click(screen.getByRole('combobox', { name: /Country/i }));
+    await user.click(await screen.findByRole('option', { name: /United States \(US\)/ }));
+
+    expect(screen.getByLabelText('Salary')).toHaveValue(null);
+    expect(screen.getByText(/re-enter in USD/i)).toBeInTheDocument();
+  });
+
+  it('hireDate inline note is shown in edit mode', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <EmployeeDialog open intent="inspect" employee={fakeEmployee} onClose={jest.fn()} onSaved={jest.fn()} />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    expect(screen.getByText(/historical record/i)).toBeInTheDocument();
+  });
+
+  it('409 EMAIL_TAKEN on update shows inline error on email and stays in edit mode', async () => {
+    mockedUpdate.mockRejectedValueOnce(new ApiError(409, 'EMAIL_TAKEN', 'Email already in use'));
+    const user = userEvent.setup();
+
+    render(
+      <EmployeeDialog open intent="inspect" employee={fakeEmployee} onClose={jest.fn()} onSaved={jest.fn()} />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    await user.clear(screen.getByLabelText('Email'));
+    await user.type(screen.getByLabelText('Email'), 'taken@example.com');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(await screen.findByText('Email already in use')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
   });
 });
