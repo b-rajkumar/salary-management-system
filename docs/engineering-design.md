@@ -217,6 +217,17 @@ Bypasses Kysely — for a 10k-row bulk insert, the prepared-statement + single-t
 
 Two pages, kept minimal.
 
+### Frontend conventions
+
+The goal is *modern and minimal with no distractions* — the data is the interface, the chrome stays out of the way.
+
+- **Component sourcing.** MUI first. Reach for a custom component only when MUI doesn't have one — and when you do, build it from MUI primitives (`Box`, `Stack`, `Typography`) rather than raw HTML + CSS.
+- **Layout & spacing.** Use MUI's 8px spacing scale via the `sx` prop (`sx={{ p: 2, gap: 1 }}`). No raw pixel values, no ad-hoc margins. Page content is centered in a `<Container maxWidth="lg">`; vertical rhythm comes from `<Stack spacing>`.
+- **Typography.** Only MUI variants (`h4`, `h6`, `body1`, `body2`, `caption`). No custom font sizes or weights. One `h4` per page as the title.
+- **Color.** Default MUI light theme. Color carries meaning only — `error` for destructive actions and validation, `primary` for the main CTA per view. No decorative color.
+- **State coverage.** Every async surface renders three states explicitly: loading (MUI `<Skeleton>` or `<CircularProgress>`), empty ("No employees yet"), and error (inline `<Alert severity="error">`). No silent spinners, no blank screens.
+- **No decoration.** No icons unless they replace text in a button (`<DeleteIcon>` in a row action). No shadows, gradients, or borders beyond MUI defaults. White space does the separating.
+
 **Employees page** (`/`)
 - MUI `<DataGrid>` in server-side mode (pagination, sort, filter, search). Salary column formatted using each row's country → currency.
 - "Add Employee" button → modal form.
