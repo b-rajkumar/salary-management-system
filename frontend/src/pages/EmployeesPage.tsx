@@ -3,6 +3,7 @@ import { Stack, Typography, Button, Alert, Box } from '@mui/material';
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import { COUNTRIES, type Employee } from '@app/shared';
 import { AddEmployeeModal } from '../components/AddEmployeeModal';
+import { EmployeeDetailsModal } from '../components/EmployeeDetailsModal';
 import { SalaryCell } from '../components/SalaryCell';
 import { useEmployeesList } from '../hooks/useEmployeesList';
 
@@ -11,39 +12,59 @@ interface Status {
   message: string;
 }
 
-const columns: GridColDef<Employee>[] = [
-  { field: 'firstName',  headerName: 'First name', flex: 1,   sortable: false },
-  { field: 'lastName',   headerName: 'Last name',  flex: 1,   sortable: false },
-  { field: 'email',      headerName: 'Email',      flex: 1.4, sortable: false },
-  { field: 'jobTitle',   headerName: 'Job title',  flex: 1.2, sortable: false },
-  { field: 'department', headerName: 'Department', flex: 1,   sortable: false },
-  {
-    field: 'country',
-    headerName: 'Country',
-    flex: 0.8,
-    sortable: false,
-    valueFormatter: (value: string) =>
-      COUNTRIES[value as keyof typeof COUNTRIES]?.name ?? value,
-  },
-  {
-    field: 'salary',
-    headerName: 'Salary',
-    flex: 1,
-    sortable: false,
-    renderCell: (params) => (
-      <SalaryCell amount={params.row.salary} country={params.row.country} />
-    ),
-  },
-  { field: 'hireDate', headerName: 'Hire date', flex: 1, sortable: false },
-];
-
 export function EmployeesPage() {
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<Status | null>(null);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(50);
+  const [detailsEmployee, setDetailsEmployee] = useState<Employee | null>(null);
 
   const { data, isLoading, error, refresh } = useEmployeesList(page, pageSize);
+
+  const columns: GridColDef<Employee>[] = [
+    {
+      field: 'fullName',
+      headerName: 'Name',
+      flex: 1.4,
+      sortable: false,
+      valueGetter: (_value, row) => `${row.firstName} ${row.lastName}`,
+    },
+    {
+      field: 'country',
+      headerName: 'Country',
+      flex: 1,
+      sortable: false,
+      valueFormatter: (value: string) =>
+        COUNTRIES[value as keyof typeof COUNTRIES]?.name ?? value,
+    },
+    {
+      field: 'salary',
+      headerName: 'Salary',
+      flex: 1,
+      sortable: false,
+      renderCell: (params) => (
+        <SalaryCell amount={params.row.salary} country={params.row.country} />
+      ),
+    },
+    { field: 'hireDate', headerName: 'Hire date', flex: 1, sortable: false },
+    {
+      field: 'actions',
+      headerName: '',
+      flex: 0.6,
+      sortable: false,
+      filterable: false,
+      disableColumnMenu: true,
+      renderCell: (params) => (
+        <Button
+          size="small"
+          onClick={() => setDetailsEmployee(params.row)}
+          aria-label={`View ${params.row.firstName} ${params.row.lastName}`}
+        >
+          View
+        </Button>
+      ),
+    },
+  ];
 
   return (
     <Stack spacing={3}>
@@ -92,6 +113,12 @@ export function EmployeesPage() {
           setStatus({ severity: 'success', message: `Added ${e.firstName} ${e.lastName}` });
           refresh();
         }}
+      />
+
+      <EmployeeDetailsModal
+        open={detailsEmployee !== null}
+        employee={detailsEmployee}
+        onClose={() => setDetailsEmployee(null)}
       />
     </Stack>
   );

@@ -47,13 +47,18 @@ beforeEach(() => {
 });
 
 describe('EmployeesPage', () => {
-  it('renders rows returned from the API', async () => {
+  it('renders rows returned from the API with the slimmed column set', async () => {
     mockedList.mockResolvedValueOnce({ rows: [fakeRow], total: 1 });
 
     render(<EmployeesPage />);
 
-    await waitFor(() => expect(screen.getByText('asha@example.com')).toBeInTheDocument());
-    expect(screen.getByText('Asha')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('Asha Rao')).toBeInTheDocument());
+    expect(screen.getByText('India')).toBeInTheDocument();
+    expect(screen.getByText('2024-01-15')).toBeInTheDocument();
+
+    expect(screen.queryByText('asha@example.com')).not.toBeInTheDocument();
+    expect(screen.queryByText('Software Engineer')).not.toBeInTheDocument();
+    expect(screen.queryByText('Engineering')).not.toBeInTheDocument();
   });
 
   it('shows an error alert when the API rejects', async () => {
@@ -90,5 +95,26 @@ describe('EmployeesPage', () => {
     expect(await screen.findByText('Added Asha Rao')).toBeInTheDocument();
     expect(screen.queryByTestId('mock-modal')).not.toBeInTheDocument();
     await waitFor(() => expect(mockedList).toHaveBeenCalledTimes(2));
+  });
+
+  it('clicking the row View button opens the details modal with full info', async () => {
+    mockedList.mockResolvedValueOnce({ rows: [fakeRow], total: 1 });
+    const user = userEvent.setup();
+
+    render(<EmployeesPage />);
+
+    await waitFor(() => expect(screen.getByText('Asha Rao')).toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: /View .*Asha Rao/i }));
+
+    expect(await screen.findByRole('dialog', { name: /Employee details/i })).toBeInTheDocument();
+    expect(screen.getByText('asha@example.com')).toBeInTheDocument();
+    expect(screen.getByText('Software Engineer')).toBeInTheDocument();
+    expect(screen.getByText('Engineering')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: /Employee details/i })).not.toBeInTheDocument(),
+    );
   });
 });

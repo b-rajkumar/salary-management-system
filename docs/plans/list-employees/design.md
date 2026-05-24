@@ -16,7 +16,7 @@ The PRD documents the eventual feature: paginated **and** sortable **and** searc
 
 - **Seed script.** `backend/scripts/seed.ts` generates 10,000 employees from `data/first_names.txt` and `data/last_names.txt`, inserts them in a single transaction. `--reset` truncates the `employees` table first. `npm run seed --workspace backend`. Built first inside the slice so everything downstream is exercised at real volume.
 - **Backend list endpoint.** `GET /api/employees?page&pageSize` → `{ rows: Employee[], total: number }`. Adds `list` methods to `EmployeesRepository`, `EmployeesService`, `EmployeesController`. Default sort is `id DESC` — newest first, so a freshly added row appears at the top of page 1 and HR can confirm the create immediately. Stable across pages.
-- **Frontend list view.** Replaces the FR-1 placeholder on the Employees page with MUI `<DataGrid>` in server-side pagination mode. Salary cell formatted with `Intl.NumberFormat` using each row's `country → currency`.
+- **Frontend list view.** Replaces the FR-1 placeholder on the Employees page with MUI `<DataGrid>` in server-side pagination mode. Visible columns: full name (combined firstName + lastName), country, salary, hire date. Salary cell formatted with `Intl.NumberFormat` using each row's `country → currency`. Each row has a "View" action opening a read-only details modal with all fields — the canvas FR-3/FR-4 will extend.
 - **Post-create refresh.** When the Add Employee modal succeeds, the grid refetches the current page so the new row shows up.
 
 ### Deferred to the next slice (`search-and-sort-employees`)
@@ -244,9 +244,10 @@ Replaces the FR-1 body placeholder with the grid:
 
 ### Columns
 
-In display order: `firstName`, `lastName`, `email`, `jobTitle`, `department`, `country`, `salary`, `hireDate`. `id` is omitted from the grid — surrogate key, no HR meaning. All columns get `sortable: false` for this slice.
+In display order: **Name** (firstName + lastName combined via `valueGetter`), **Country**, **Salary**, **Hire date**, **Actions**. Email, job title, and department are deliberately *not* in the grid — they're available via the per-row "View" action. `id` is omitted from the grid. All data columns get `sortable: false` for this slice.
 
 - **`country`** displays `COUNTRIES[row.country].name` (e.g. "India"), not the raw `IN`. The underlying value stays as the ISO code.
+- **`actions`** column has a small "View" button per row with `aria-label="View {firstName} {lastName}"` (for screen readers and tests). Clicking sets the page's `detailsEmployee` state, which opens `<EmployeeDetailsModal>` showing all fields.
 - **`salary`** uses a `renderCell` that calls `Intl.NumberFormat` with the row's currency:
   ```ts
   new Intl.NumberFormat(undefined, {

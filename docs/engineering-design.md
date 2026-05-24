@@ -230,9 +230,9 @@ The goal is *modern and minimal with no distractions* — the data is the interf
 - **No decoration.** No icons unless they replace text in a button (`<DeleteIcon>` in a row action). No shadows, gradients, or borders beyond MUI defaults. White space does the separating.
 
 **Employees page** (`/`)
-- MUI `<DataGrid>` in server-side mode (pagination, sort, filter, search). Salary column formatted using each row's country → currency.
+- MUI `<DataGrid>` in server-side mode (pagination, sort, filter, search). Visible columns: full name, country, salary, hire date. Salary formatted using each row's country → currency.
 - "Add Employee" button → modal form.
-- Row actions: edit (modal form), delete (confirm dialog).
+- Row actions: **view** (read-only details modal showing every field — the canvas FR-3 edit and FR-4 delete will later extend), edit (modal form), delete (confirm dialog).
 - Form validates client-side with Zod via `react-hook-form` before submit. The country dropdown is driven by `shared/countries.ts`; selecting a country reveals the currency code next to the salary input (e.g. "Salary (INR)").
 
 **Insights page** (`/insights`)
