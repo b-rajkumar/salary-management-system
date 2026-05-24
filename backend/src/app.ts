@@ -7,6 +7,10 @@ import { EmployeesRepository } from './repositories/EmployeesRepository';
 import { EmployeesService } from './services/EmployeesService';
 import { EmployeesController } from './controllers/EmployeesController';
 import { employeesRouter } from './routes/employees';
+import { InsightsRepository } from './repositories/InsightsRepository';
+import { InsightsService } from './services/InsightsService';
+import { InsightsController } from './controllers/InsightsController';
+import { insightsRouter } from './routes/insights';
 
 const MIGRATIONS_DIR = path.join(__dirname, '..', 'migrations');
 
@@ -18,6 +22,9 @@ export function buildApp(dbPath: string): { app: Express; db: DbHandle } {
   const employees = new EmployeesController(
     new EmployeesService(new EmployeesRepository(db.kysely)),
   );
+  const insights = new InsightsController(
+    new InsightsService(new InsightsRepository(db.kysely)),
+  );
 
   const app = express();
 
@@ -26,6 +33,7 @@ export function buildApp(dbPath: string): { app: Express; db: DbHandle } {
     res.status(200).json({ ok: true });
   });
   app.use('/api/employees', employeesRouter(employees));
+  app.use('/api/insights', insightsRouter(insights));
   app.use(errorMiddleware);
 
   return { app, db };
