@@ -1,7 +1,7 @@
-import type { Kysely } from 'kysely';
+import { sql, type Kysely } from 'kysely';
 import type { DB } from '../db/types';
 import { ConflictError } from '../lib/errors';
-import type { Employee, EmployeeCreateInput } from '@app/shared';
+import type { Employee, EmployeeCreateInput, EmployeesListResponse } from '@app/shared';
 
 const isUniqueEmailViolation = (err: unknown): boolean =>
   err instanceof Error && /UNIQUE constraint failed: employees\.email/i.test(err.message);
@@ -22,5 +22,22 @@ export class EmployeesRepository {
       }
       throw err;
     }
+  }
+
+  async list(args: { page: number; pageSize: number }): Promise<EmployeesListResponse> {
+    const rows = await this.db
+      .selectFrom('employees')
+      .selectAll()
+      .orderBy('id', 'asc')
+      .limit(args.pageSize)
+      .offset(args.page * args.pageSize)
+      .execute();
+
+    const countRow = await this.db
+      .selectFrom('employees')
+      .select(sql<number>`count(*)`.as('total'))
+      .executeTakeFirstOrThrow();
+
+    return { rows, total: Number(countRow.total) };
   }
 }
