@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Stack,
   MenuItem, InputAdornment, Alert, CircularProgress,
+  Box, Typography, Divider,
 } from '@mui/material';
 import {
   employeeCreateSchema, COUNTRIES,
@@ -13,6 +14,7 @@ import { z } from 'zod';
 import { createEmployee } from '../api/employees';
 import { ApiError } from '../api/client';
 import { FormField } from './FormField';
+import { SalaryCell } from './SalaryCell';
 
 const dialogFormSchema = employeeCreateSchema.extend({
   salary: z.coerce.number({ invalid_type_error: 'Required' }).int('Whole numbers only').min(1, 'Must be at least 1'),
@@ -35,10 +37,75 @@ const emptyDefaults: FormValues = {
 };
 
 type Props =
-  | { open: boolean; intent: 'create'; onClose: () => void; onSaved: (e: Employee) => void };
+  | { open: boolean; intent: 'create'; onClose: () => void; onSaved: (e: Employee) => void }
+  | {
+      open: boolean;
+      intent: 'inspect';
+      employee: Employee;
+      onClose: () => void;
+      onSaved: (e: Employee) => void;
+    };
 
 export function EmployeeDialog(props: Props) {
-  const { open, onClose, onSaved } = props;
+  if (props.intent === 'inspect') {
+    return <InspectDialog {...props} />;
+  }
+
+  return <CreateDialog {...props} />;
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <Box>
+      <Typography variant="caption" color="text.secondary" display="block">{label}</Typography>
+      <Typography variant="body1">{children}</Typography>
+    </Box>
+  );
+}
+
+function ViewBody({ employee }: { employee: Employee }) {
+  const countryEntry = COUNTRIES[employee.country as CountryCode];
+  const countryDisplay = countryEntry
+    ? `${countryEntry.name} (${employee.country})`
+    : employee.country;
+
+  return (
+    <Stack spacing={2} sx={{ pt: 1 }}>
+      <Field label="First name">{employee.firstName}</Field>
+      <Field label="Last name">{employee.lastName}</Field>
+      <Field label="Email">{employee.email}</Field>
+      <Field label="Job title">{employee.jobTitle}</Field>
+      <Field label="Department">{employee.department}</Field>
+      <Field label="Country">{countryDisplay}</Field>
+      <Field label="Salary">
+        <SalaryCell amount={employee.salary} country={employee.country} />
+      </Field>
+      <Field label="Hire date">{employee.hireDate}</Field>
+      <Divider />
+      <Field label="Created">{employee.createdAt}</Field>
+      <Field label="Last updated">{employee.updatedAt}</Field>
+    </Stack>
+  );
+}
+
+function InspectDialog({
+  open, employee, onClose,
+}: Extract<Props, { intent: 'inspect' }>) {
+  return (
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>{employee.firstName} {employee.lastName}</DialogTitle>
+      <DialogContent>
+        <ViewBody employee={employee} />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Close</Button>
+        <Button variant="contained">Edit</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+function CreateDialog({ open, onClose, onSaved }: Extract<Props, { intent: 'create' }>) {
   const { control, handleSubmit, watch, setError, reset, formState } = useForm<FormValues>({
     resolver: zodResolver(dialogFormSchema) as never,
     mode: 'onBlur',

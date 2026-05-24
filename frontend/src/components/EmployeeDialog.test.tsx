@@ -87,3 +87,60 @@ describe('EmployeeDialog — create mode', () => {
     expect(onSaved).not.toHaveBeenCalled();
   });
 });
+
+describe('EmployeeDialog — view mode', () => {
+  it("renders the employee's name as the title and all 8 fields read-only", () => {
+    render(
+      <EmployeeDialog
+        open
+        intent="inspect"
+        employee={fakeEmployee}
+        onClose={jest.fn()}
+        onSaved={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Asha Rao')).toBeInTheDocument();
+    expect(screen.getByText('asha@example.com')).toBeInTheDocument();
+    expect(screen.getByText('Software Engineer')).toBeInTheDocument();
+    expect(screen.getByText('Engineering')).toBeInTheDocument();
+    expect(screen.getByText(/India.*IN/)).toBeInTheDocument();
+    expect(screen.getByText('2024-01-15')).toBeInTheDocument();
+    expect(screen.queryByLabelText('First name')).not.toBeInTheDocument();
+  });
+
+  it('shows Close and Edit buttons (no Cancel / Save in view mode)', () => {
+    render(
+      <EmployeeDialog
+        open
+        intent="inspect"
+        employee={fakeEmployee}
+        onClose={jest.fn()}
+        onSaved={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+  });
+
+  it('Close button calls onClose', async () => {
+    const user = userEvent.setup();
+    const onClose = jest.fn();
+
+    render(
+      <EmployeeDialog
+        open
+        intent="inspect"
+        employee={fakeEmployee}
+        onClose={onClose}
+        onSaved={jest.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    expect(onClose).toHaveBeenCalled();
+  });
+});
