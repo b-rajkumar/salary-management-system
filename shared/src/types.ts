@@ -1,3 +1,5 @@
+import type { EmployeeCreateInput } from './schemas';
+
 export interface Employee {
   id: number;
   firstName: string;
@@ -16,3 +18,5 @@ export interface EmployeesListResponse {
   rows: Employee[];
   total: number;
 }
+
+export type EmployeeUpdateInput = EmployeeCreateInput;
