@@ -48,9 +48,8 @@ The HR Manager can create a new employee record. The system requires: first name
 ### FR-2 — View employees
 The HR Manager can see a list of employees with all fields visible. The list supports:
 - Pagination across the full dataset.
-- Sorting by any column.
+- Sorting by name, email, and hire date.
 - Free-text search across name and email.
-- Filtering by country, department, and job title.
 
 ### FR-3 — Update an employee
 The HR Manager can edit any field on an existing employee record. The same validation rules as FR-1 apply.

@@ -154,9 +154,8 @@ REST under `/api`. All responses JSON. Validation via Zod at every input boundar
 
 **`GET /api/employees` query params:**
 - `page` (default 0), `pageSize` (default 50, max 200)
-- `sortBy` (whitelisted column names), `sortDir` (`asc`|`desc`)
+- `sortBy` (one of: `firstName`, `lastName`, `email`, `hireDate`), `sortDir` (`asc`|`desc`)
 - `q` (search across firstName, lastName, email — SQL `LIKE`, sufficient at 10k rows)
-- `country`, `department`, `jobTitle` (exact-match filters)
 
 **Response shape:** `{ rows: Employee[], total: number }` — matches MUI DataGrid's server-side mode.
 
