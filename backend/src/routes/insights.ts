@@ -8,5 +8,13 @@ export function insightsRouter(controller: InsightsController): Router {
     controller.byCountry(req, res).catch(next);
   });
 
+  r.get('/country/:country/job-titles', (req, res, next) => {
+    controller.jobTitles(req, res).catch(next);
+  });
+
+  r.get('/country/:country/job-title', (req, res, next) => {
+    controller.byCountryAndRole(req, res).catch(next);
+  });
+
   return r;
 }

@@ -148,3 +148,106 @@ describe('InsightsRepository.departmentsByCountry', () => {
     ]);
   });
 });
+
+describe('InsightsRepository.distinctJobTitles', () => {
+  let repo: InsightsRepository;
+  let employees: EmployeesRepository;
+
+  beforeEach(() => {
+    const sqlite = new Database(':memory:');
+
+    migrate(sqlite, path.join(__dirname, '..', '..', 'migrations'));
+    const kysely = new Kysely<DB>({ dialect: new SqliteDialect({ database: sqlite }) });
+
+    repo = new InsightsRepository(kysely);
+    employees = new EmployeesRepository(kysely);
+  });
+
+  test('returns [] when no employees in the country', async () => {
+    await employees.insert({ ...baseEmployee, email: 'a@x.com', country: 'US' });
+
+    const result = await repo.distinctJobTitles('IN');
+
+    expect(result).toEqual([]);
+  });
+
+  test('returns titles for the country sorted case-insensitively, ignoring other countries', async () => {
+    await employees.insert({ ...baseEmployee, email: 'a@x.com', country: 'IN', jobTitle: 'Software Engineer' });
+    await employees.insert({ ...baseEmployee, email: 'b@x.com', country: 'IN', jobTitle: 'Product Manager' });
+    await employees.insert({ ...baseEmployee, email: 'c@x.com', country: 'IN', jobTitle: 'Designer' });
+    await employees.insert({ ...baseEmployee, email: 'd@x.com', country: 'US', jobTitle: 'CFO' });
+
+    const result = await repo.distinctJobTitles('IN');
+
+    expect(result).toEqual(['Designer', 'Product Manager', 'Software Engineer']);
+  });
+
+  test('collapses casing variants and returns the lexicographically minimum display string', async () => {
+    await employees.insert({ ...baseEmployee, email: 'a@x.com', country: 'IN', jobTitle: 'IT Manager' });
+    await employees.insert({ ...baseEmployee, email: 'b@x.com', country: 'IN', jobTitle: 'It Manager' });
+    await employees.insert({ ...baseEmployee, email: 'c@x.com', country: 'IN', jobTitle: 'it manager' });
+
+    const result = await repo.distinctJobTitles('IN');
+
+    expect(result).toEqual(['IT Manager']);
+  });
+});
+
+describe('InsightsRepository.aggregateByCountryAndRole', () => {
+  let repo: InsightsRepository;
+  let employees: EmployeesRepository;
+
+  beforeEach(() => {
+    const sqlite = new Database(':memory:');
+
+    migrate(sqlite, path.join(__dirname, '..', '..', 'migrations'));
+    const kysely = new Kysely<DB>({ dialect: new SqliteDialect({ database: sqlite }) });
+
+    repo = new InsightsRepository(kysely);
+    employees = new EmployeesRepository(kysely);
+  });
+
+  test('returns count=0 when no rows match the (country, title) filter', async () => {
+    await employees.insert({ ...baseEmployee, email: 'a@x.com', country: 'IN', jobTitle: 'Software Engineer' });
+
+    const result = await repo.aggregateByCountryAndRole('IN', 'Nope');
+
+    expect(result.count).toBe(0);
+    expect(result.min).toBeNull();
+    expect(result.avg).toBeNull();
+    expect(result.newHiresLast12Months).toBe(0);
+  });
+
+  test('returns aggregate over matching rows', async () => {
+    await employees.insert({ ...baseEmployee, email: 'a@x.com', country: 'IN', jobTitle: 'Software Engineer', salary: 100 });
+    await employees.insert({ ...baseEmployee, email: 'b@x.com', country: 'IN', jobTitle: 'Software Engineer', salary: 300 });
+    await employees.insert({ ...baseEmployee, email: 'c@x.com', country: 'IN', jobTitle: 'Designer',          salary: 9999 });
+
+    const result = await repo.aggregateByCountryAndRole('IN', 'Software Engineer');
+
+    expect(result.count).toBe(2);
+    expect(result.min).toBe(100);
+    expect(result.max).toBe(300);
+    expect(result.avg).toBe(200);
+  });
+
+  test('matches the title case-insensitively', async () => {
+    await employees.insert({ ...baseEmployee, email: 'a@x.com', country: 'IN', jobTitle: 'Software Engineer', salary: 100 });
+    await employees.insert({ ...baseEmployee, email: 'b@x.com', country: 'IN', jobTitle: 'software engineer', salary: 200 });
+
+    const result = await repo.aggregateByCountryAndRole('IN', 'SOFTWARE ENGINEER');
+
+    expect(result.count).toBe(2);
+    expect(result.avg).toBe(150);
+  });
+
+  test('does not bleed across countries', async () => {
+    await employees.insert({ ...baseEmployee, email: 'a@x.com', country: 'IN', jobTitle: 'Software Engineer', salary: 100 });
+    await employees.insert({ ...baseEmployee, email: 'b@x.com', country: 'US', jobTitle: 'Software Engineer', salary: 9999 });
+
+    const result = await repo.aggregateByCountryAndRole('IN', 'Software Engineer');
+
+    expect(result.count).toBe(1);
+    expect(result.max).toBe(100);
+  });
+});

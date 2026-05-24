@@ -40,3 +40,19 @@ export interface CountryInsightsResponse {
     avgSalary: number;
   }>;
 }
+
+export interface RoleInsightsResponse {
+  country: string;
+  jobTitle: string;
+  currency: string;
+  count: number;
+  salary: {
+    min: number;
+    max: number;
+    avg: number;
+  };
+  tenure: {
+    avgYears: number;
+    newHiresLast12Months: number;
+  };
+}

@@ -123,7 +123,7 @@ CREATE TABLE employees (
 );
 
 CREATE INDEX idx_employees_country           ON employees (country);
-CREATE INDEX idx_employees_country_jobTitle  ON employees (country, jobTitle);
+CREATE INDEX idx_employees_country_jobTitle_nocase  ON employees (country, jobTitle COLLATE NOCASE);
 ```
 
 Both the API-contract type (`shared/Employee`) and the Kysely DB interface (`backend/src/db/types.ts`) are hand-mirrored from this SQL. They're declared once each in TypeScript; the SQL stays the single source of truth. The repository uses `Kysely<DB>` and gets compile-time checks on table names, column names, operators, and result shapes.
@@ -133,6 +133,7 @@ Both the API-contract type (`shared/Employee`) and the Kysely DB interface (`bac
 - `email` is the natural unique business key; `id` is the surrogate key in URLs.
 - Dates stored as ISO 8601 `TEXT` (SQLite has no native date type).
 - Two indexes sized to the exact metric queries.
+- Migration 002 swaps the original binary-collation `(country, jobTitle)` index for the case-insensitive one — case-insensitive matching is the contract for the FR-6 role picker (see `decisions.md`).
 
 ### Country reference data
 
@@ -242,17 +243,17 @@ Both queries hit `idx_employees_country`. Two queries instead of one is the pric
 
 1. `GET /api/insights/country/:country/job-title?title=...` arrives.
 2. Controller validates `country` (whitelist) and `title` (non-empty, trimmed string).
-3. Service calls `InsightsRepository.aggregateByCountryAndRole(country, title)` — same shape as `aggregateByCountry`, no department breakdown, filtered by `(country, jobTitle)`. Uses `idx_employees_country_jobTitle`.
-4. `count === 0` → `NotFoundError("ROLE_IN_COUNTRY_NOT_FOUND")` → `404`.
-5. Otherwise → assembled response with `currency` and `jobTitle` echoed back.
+3. Service calls `InsightsRepository.aggregateByCountryAndRole(country, title)` — same select list as `aggregateByCountry`, filtered by `country = ? AND jobTitle = ? COLLATE NOCASE`. Uses `idx_employees_country_jobTitle_nocase`.
+4. `count === 0` → `NotFoundError("ROLE_NOT_FOUND")` → `404`.
+5. Otherwise → assembled response with `currency` from `COUNTRIES` and `jobTitle` echoed back from the request (preserves the picker's chosen display casing).
 
 ### Job-titles picker
 
 1. `GET /api/insights/country/:country/job-titles` arrives.
 2. Controller validates the country.
-3. Service calls `InsightsRepository.jobTitlesByCountry(country)` — `SELECT DISTINCT jobTitle FROM employees WHERE country = ? ORDER BY jobTitle`.
-4. Empty list → `NotFoundError("COUNTRY_NOT_FOUND")` → `404`. Keeps the empty-country signal consistent with the country aggregate endpoint.
-5. Otherwise → `{ country, jobTitles: [...] }`.
+3. Service calls `InsightsRepository.distinctJobTitles(country)` — `SELECT MIN(jobTitle) FROM employees WHERE country = ? GROUP BY LOWER(jobTitle) ORDER BY LOWER(jobTitle)`. The `MIN` picks a deterministic display casing per role.
+4. Empty country returns `[]` — **not** a 404. The picker handles an empty list itself (disabled state).
+5. Returns a plain JSON array of title strings. No envelope.
 
 ## 7. Seed Script
 
@@ -288,9 +289,11 @@ The goal is *modern and minimal with no distractions* — the data is the interf
 - Form validates client-side with Zod via `react-hook-form` before submit. The country dropdown is driven by `shared/countries.ts`; selecting a country reveals the currency code next to the salary input (e.g. "Salary (INR)").
 
 **Insights page** (`/insights`)
-- Country selector → cards showing min / max / avg salary in that country, formatted in the country's currency.
-- Country + job title selector → card showing avg salary for that role in that country.
-- Plain numeric display — no charts needed for two metrics.
+- A Country selector and a Role selector sit side-by-side at the top. Role is disabled until a country is picked, defaults to "All roles", and resets to "All roles" whenever the country changes.
+- When Role is "All roles": shows the country card — salary card (mean headline, min/max captions, visual range bar) + headcount / avg tenure / new-hires-12mo stat cards + departments breakdown table.
+- When a specific Role is picked: same four cards refresh with role-filtered data, the departments table disappears, and the salary card gains a comparison-to-country delta line (e.g. "+24% vs all roles in India").
+- The visual range bar (a 1-line track with a marker at mean) is the one allowed non-textual primitive on this page — it conveys distribution shape without a chart library.
+- Plain numeric display elsewhere — no charts.
 
 Top-level navigation: MUI `<AppBar>` with two tabs.
 

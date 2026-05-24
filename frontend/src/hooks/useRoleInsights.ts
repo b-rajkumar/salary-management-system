@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react';
-import { getCountryInsights, type CountryInsightsResult } from '../api/insights';
+import { getRoleInsights, type RoleInsightsResult } from '../api/insights';
 
-export interface UseCountryInsights {
-  result: CountryInsightsResult | null;
+export interface UseRoleInsights {
+  result: RoleInsightsResult | null;
   isLoading: boolean;
   error: string | null;
 }
 
-export function useCountryInsights(country: string | null): UseCountryInsights {
-  const [result, setResult] = useState<CountryInsightsResult | null>(null);
+export function useRoleInsights(country: string | null, role: string | null): UseRoleInsights {
+  const [result, setResult] = useState<RoleInsightsResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (country === null) {
+    if (country === null || role === null) {
       setResult(null);
       setError(null);
       setIsLoading(false);
@@ -27,7 +27,7 @@ export function useCountryInsights(country: string | null): UseCountryInsights {
     setError(null);
     setResult(null);
 
-    getCountryInsights(country)
+    getRoleInsights(country, role)
       .then((r) => {
         if (!cancelled) {
           setResult(r);
@@ -47,7 +47,7 @@ export function useCountryInsights(country: string | null): UseCountryInsights {
     return () => {
       cancelled = true;
     };
-  }, [country]);
+  }, [country, role]);
 
   return { result, isLoading, error };
 }

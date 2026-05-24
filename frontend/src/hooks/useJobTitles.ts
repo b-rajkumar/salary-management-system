@@ -1,20 +1,20 @@
 import { useEffect, useState } from 'react';
-import { getCountryInsights, type CountryInsightsResult } from '../api/insights';
+import { getJobTitles } from '../api/insights';
 
-export interface UseCountryInsights {
-  result: CountryInsightsResult | null;
+export interface UseJobTitles {
+  titles: string[];
   isLoading: boolean;
   error: string | null;
 }
 
-export function useCountryInsights(country: string | null): UseCountryInsights {
-  const [result, setResult] = useState<CountryInsightsResult | null>(null);
+export function useJobTitles(country: string | null): UseJobTitles {
+  const [titles, setTitles] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (country === null) {
-      setResult(null);
+      setTitles([]);
       setError(null);
       setIsLoading(false);
 
@@ -25,12 +25,12 @@ export function useCountryInsights(country: string | null): UseCountryInsights {
 
     setIsLoading(true);
     setError(null);
-    setResult(null);
+    setTitles([]);
 
-    getCountryInsights(country)
-      .then((r) => {
+    getJobTitles(country)
+      .then((t) => {
         if (!cancelled) {
-          setResult(r);
+          setTitles(t);
         }
       })
       .catch((err: Error) => {
@@ -49,5 +49,5 @@ export function useCountryInsights(country: string | null): UseCountryInsights {
     };
   }, [country]);
 
-  return { result, isLoading, error };
+  return { titles, isLoading, error };
 }

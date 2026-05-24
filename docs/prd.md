@@ -72,12 +72,14 @@ The HR Manager can select a country and see a snapshot of compensation and headc
 If the country has no employees, the system says so via an inline empty state (not an error alert).
 
 ### FR-6 — Role-in-country salary insights
-The HR Manager can select a country and a job title and see compensation and headcount for that specific role in that country, in the country's local currency:
+On the same Insights page, the HR Manager narrows the country view to a specific role via a Role selector next to the Country selector. The role list is **sourced from the actual employees in the selected country**, with casing variants collapsed (e.g. "IT Manager" and "it manager" appear as one entry). Matching against the stored data is case-insensitive. When a role is selected, the page shows, in the country's local currency:
 
 - **Salary distribution for the role:** minimum, maximum, and mean. Same shape as FR-5.
 - **Headcount and tenure for the role:** number of employees holding that title in that country, average tenure, and hires in the last 12 months.
+- **Comparison to country:** a delta line under the role's mean salary expressing the percent difference from the country-wide mean (e.g. "+24% vs all roles in India"). This is the answer to the implicit question HR brings to the page.
+- **Visual range bar:** a small horizontal bar from min to max with a marker at mean, rendering distribution shape without a chart library.
 
-Job titles in the picker are sourced from the actual employees in the selected country — HR picks from titles that exist, never types one verbatim. If no matching employees exist (an unreachable state via the picker alone, but a safety net), the system says so via an inline empty state.
+Changing the country resets the role to "All roles" and the page falls back to the FR-5 country view. If no employees hold the picked title in the selected country (a race after a delete), the system shows an inline empty state — not an error alert.
 
 ## 6. Non-Functional Requirements
 
@@ -85,7 +87,7 @@ Job titles in the picker are sourced from the actual employees in the selected c
 |----|-------------|
 | NFR-1 | The employee list is virtualized server-side so 10,000 records do not block render or scroll. The grid only ever holds one page in memory. |
 | NFR-2 | The seed uses a single-transaction bulk insert so engineers can re-run it without friction during development. |
-| NFR-3 | The two insights endpoints are served by indexes on `country` and `(country, jobTitle)`, not full table scans. |
+| NFR-3 | The insights endpoints are served by indexes on `country` and `(country, jobTitle COLLATE NOCASE)`, not full table scans. |
 | NFR-4 | The system is deployable as a single artifact and accessible at a public URL for evaluation. |
 | NFR-5 | Backend tests run fast enough for TDD's inner loop — every test uses `:memory:` SQLite, no file I/O, no network. |
 
