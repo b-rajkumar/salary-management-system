@@ -1,9 +1,18 @@
-import type { Employee, EmployeeCreateInput, EmployeesListResponse } from '@app/shared';
+import type {
+  Employee, EmployeeCreateInput, EmployeesListResponse, EmployeeUpdateInput,
+} from '@app/shared';
 import { request } from './client';
 
 export function createEmployee(input: EmployeeCreateInput): Promise<Employee> {
   return request<Employee>('/api/employees', {
     method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateEmployee(id: number, input: EmployeeUpdateInput): Promise<Employee> {
+  return request<Employee>(`/api/employees/${id}`, {
+    method: 'PUT',
     body: JSON.stringify(input),
   });
 }
