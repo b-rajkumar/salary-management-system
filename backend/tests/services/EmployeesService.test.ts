@@ -1,5 +1,5 @@
 import { EmployeesService } from '../../src/services/EmployeesService';
-import { ConflictError } from '../../src/lib/errors';
+import { ConflictError, NotFoundError } from '../../src/lib/errors';
 import type { EmployeesRepository } from '../../src/repositories/EmployeesRepository';
 
 const input = {
@@ -14,11 +14,11 @@ const input = {
 };
 
 describe('EmployeesService', () => {
-  let repo: { insert: jest.Mock; list: jest.Mock };
+  let repo: { insert: jest.Mock; list: jest.Mock; update: jest.Mock };
   let service: EmployeesService;
 
   beforeEach(() => {
-    repo = { insert: jest.fn(), list: jest.fn() };
+    repo = { insert: jest.fn(), list: jest.fn(), update: jest.fn() };
     service = new EmployeesService(repo as unknown as EmployeesRepository);
   });
 
@@ -55,5 +55,31 @@ describe('EmployeesService', () => {
     await service.list({ page: 0, pageSize: 50, q: 'asha' });
 
     expect(repo.list).toHaveBeenCalledWith({ page: 0, pageSize: 50, q: 'asha' });
+  });
+
+  test('update delegates to repo.update and returns its result', async () => {
+    const row = { id: 1, ...input, createdAt: 't', updatedAt: 'u' };
+
+    repo.update.mockResolvedValue(row);
+
+    const result = await service.update(1, input);
+
+    expect(repo.update).toHaveBeenCalledWith(1, input);
+    expect(result).toBe(row);
+  });
+
+  test('update throws NotFoundError when repo.update returns null', async () => {
+    repo.update.mockResolvedValue(null);
+
+    await expect(service.update(999, input)).rejects.toMatchObject({
+      constructor: NotFoundError,
+      code: 'EMPLOYEE_NOT_FOUND',
+    });
+  });
+
+  test('update propagates ConflictError thrown by the repo', async () => {
+    repo.update.mockRejectedValue(new ConflictError('EMAIL_TAKEN', 'taken'));
+
+    await expect(service.update(1, input)).rejects.toBeInstanceOf(ConflictError);
   });
 });
