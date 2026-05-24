@@ -46,7 +46,7 @@ The HR Manager today lacks a single tool to keep employee records current and to
 The HR Manager can create a new employee record. The system requires: first name, last name, email (unique), job title, department, country, salary, and hire date. Salary is entered as a whole number in the local currency of the selected country (e.g. INR for India, USD for the United States) — the currency is derived from the country and displayed alongside the input, not entered separately. The system rejects records with missing required fields, an invalid email format, a duplicate email, an unsupported country, or a negative salary, and shows a clear error message in the UI.
 
 ### FR-2 — View employees
-The HR Manager can see a list of employees with all fields visible. The list supports:
+The HR Manager can see a list of employees with all fields visible. Recently added employees appear first by default — a freshly created row shows on page 1 without HR having to navigate. The list supports:
 - Pagination across the full dataset.
 - Sorting by name, email, and hire date.
 - Free-text search across name and email.

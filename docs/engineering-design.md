@@ -157,6 +157,8 @@ REST under `/api`. All responses JSON. Validation via Zod at every input boundar
 - `sortBy` (one of: `firstName`, `lastName`, `email`, `hireDate`), `sortDir` (`asc`|`desc`)
 - `q` (search across firstName, lastName, email — SQL `LIKE`, sufficient at 10k rows)
 
+**Default order:** when `sortBy` is omitted, rows return ordered by `id DESC` — newest first. This keeps a freshly added row on page 1 so HR can confirm the add immediately. Insertion order is the only sort claim of the default; user-driven sorts override it.
+
 **Response shape:** `{ rows: Employee[], total: number }` — matches MUI DataGrid's server-side mode.
 
 ### Insights

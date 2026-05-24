@@ -15,7 +15,7 @@ The PRD documents the eventual feature: paginated **and** sortable **and** searc
 ### In scope
 
 - **Seed script.** `backend/scripts/seed.ts` generates 10,000 employees from `data/first_names.txt` and `data/last_names.txt`, inserts them in a single transaction. `--reset` truncates the `employees` table first. `npm run seed --workspace backend`. Built first inside the slice so everything downstream is exercised at real volume.
-- **Backend list endpoint.** `GET /api/employees?page&pageSize` → `{ rows: Employee[], total: number }`. Adds `list` methods to `EmployeesRepository`, `EmployeesService`, `EmployeesController`. Default sort is `id ASC` — insertion order, stable across pages, no UX claim attached.
+- **Backend list endpoint.** `GET /api/employees?page&pageSize` → `{ rows: Employee[], total: number }`. Adds `list` methods to `EmployeesRepository`, `EmployeesService`, `EmployeesController`. Default sort is `id DESC` — newest first, so a freshly added row appears at the top of page 1 and HR can confirm the create immediately. Stable across pages.
 - **Frontend list view.** Replaces the FR-1 placeholder on the Employees page with MUI `<DataGrid>` in server-side pagination mode. Salary cell formatted with `Intl.NumberFormat` using each row's `country → currency`.
 - **Post-create refresh.** When the Add Employee modal succeeds, the grid refetches the current page so the new row shows up.
 
@@ -43,7 +43,7 @@ GET /api/employees
 400 → { error: { code: "VALIDATION_ERROR", ... } }   if page or pageSize is invalid
 ```
 
-- Rows are ordered by `id ASC` (insertion order — stable across pages, no claim of HR-meaningful sort).
+- Rows are ordered by `id DESC` — newest first. A freshly added row appears at the top of page 1, giving HR immediate visual confirmation that the add landed. Insertion order is the only sort claim; sort by user-facing columns ships with the next slice.
 - Empty result: `200` with `{ rows: [], total: 0 }`. Never a `404`.
 - `total` is the unfiltered `COUNT(*)` of the employees table for this slice (no filters exist yet).
 - A single Zod schema in the controller coerces and validates both query params.
@@ -70,7 +70,7 @@ Both backend (return type of `EmployeesService.list`) and frontend (return type 
 ### Layering (per CLAUDE.md)
 
 - **`EmployeesRepository.list({ page, pageSize })`** — two Kysely queries:
-  - `selectFrom('employees').selectAll().orderBy('id', 'asc').limit(pageSize).offset(page * pageSize).execute()`
+  - `selectFrom('employees').selectAll().orderBy('id', 'desc').limit(pageSize).offset(page * pageSize).execute()`
   - `selectFrom('employees').select(db.fn.countAll<number>().as('total')).executeTakeFirstOrThrow()`
   Returns `{ rows, total }`. No driver-specific errors expected; no try/catch needed.
 - **`EmployeesService.list(args)`** — pass-through to the repository for this slice. The layer stays so the next slice can grow it (sort whitelist enforcement, search predicate composition) without controller churn.
@@ -292,10 +292,10 @@ Per CLAUDE.md mock-at-boundaries.
 
 - **`EmployeesRepository.test.ts` (extends FR-1)** — real `:memory:` SQLite + `migrate()`:
   - returns `{ rows: [], total: 0 }` against an empty table
-  - inserts 60 rows; `list({ page: 0, pageSize: 25 })` returns rows 1-25 with `total: 60`
-  - inserts 60 rows; `list({ page: 1, pageSize: 25 })` returns rows 26-50 with `total: 60`
-  - inserts 60 rows; `list({ page: 2, pageSize: 25 })` returns the partial page 51-60 with `total: 60`
-  - rows are ordered by `id ASC` and never overlap across pages
+  - inserts 60 rows; `list({ page: 0, pageSize: 25 })` returns the newest 25 (ids 60→36) with `total: 60`
+  - inserts 60 rows; `list({ page: 1, pageSize: 25 })` returns ids 35→11 with `total: 60`
+  - inserts 60 rows; `list({ page: 2, pageSize: 25 })` returns the partial last page ids 10→1 with `total: 60`
+  - rows are ordered by `id DESC` and never overlap across pages
 - **`EmployeesService.test.ts` (extends FR-1)** — mocked repository:
   - `list` forwards `{ page, pageSize }` to `repo.list` and returns the result unchanged
 - **`EmployeesController.test.ts` (extends FR-1)** — supertest + mocked service:

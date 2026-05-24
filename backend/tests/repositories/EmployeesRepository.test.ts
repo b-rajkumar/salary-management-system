@@ -53,7 +53,7 @@ describe('EmployeesRepository', () => {
       expect(result).toEqual({ rows: [], total: 0 });
     });
 
-    test('returns the first page and the correct total when total > pageSize', async () => {
+    test('returns the first page (newest first) and the correct total when total > pageSize', async () => {
       for (let i = 0; i < 60; i++) {
         await repo.insert({ ...input, email: `emp${i}@example.com` });
       }
@@ -62,8 +62,8 @@ describe('EmployeesRepository', () => {
 
       expect(result.rows).toHaveLength(25);
       expect(result.total).toBe(60);
-      expect(result.rows[0].email).toBe('emp0@example.com');
-      expect(result.rows[24].email).toBe('emp24@example.com');
+      expect(result.rows[0].email).toBe('emp59@example.com');
+      expect(result.rows[24].email).toBe('emp35@example.com');
     });
 
     test('returns the requested middle page', async () => {
@@ -75,8 +75,8 @@ describe('EmployeesRepository', () => {
 
       expect(result.rows).toHaveLength(25);
       expect(result.total).toBe(60);
-      expect(result.rows[0].email).toBe('emp25@example.com');
-      expect(result.rows[24].email).toBe('emp49@example.com');
+      expect(result.rows[0].email).toBe('emp34@example.com');
+      expect(result.rows[24].email).toBe('emp10@example.com');
     });
 
     test('returns a partial last page', async () => {
@@ -88,11 +88,11 @@ describe('EmployeesRepository', () => {
 
       expect(result.rows).toHaveLength(10);
       expect(result.total).toBe(60);
-      expect(result.rows[0].email).toBe('emp50@example.com');
-      expect(result.rows[9].email).toBe('emp59@example.com');
+      expect(result.rows[0].email).toBe('emp9@example.com');
+      expect(result.rows[9].email).toBe('emp0@example.com');
     });
 
-    test('orders by id ascending — pages do not overlap', async () => {
+    test('orders by id descending — pages do not overlap', async () => {
       for (let i = 0; i < 30; i++) {
         await repo.insert({ ...input, email: `emp${i}@example.com` });
       }
@@ -103,7 +103,7 @@ describe('EmployeesRepository', () => {
 
       const ids = [...page0.rows, ...page1.rows, ...page2.rows].map((r) => r.id);
 
-      expect(ids).toEqual([...ids].sort((a, b) => a - b));
+      expect(ids).toEqual([...ids].sort((a, b) => b - a));
       expect(new Set(ids).size).toBe(30);
     });
   });

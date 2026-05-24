@@ -28,7 +28,7 @@ export class EmployeesRepository {
     const rows = await this.db
       .selectFrom('employees')
       .selectAll()
-      .orderBy('id', 'asc')
+      .orderBy('id', 'desc')
       .limit(args.pageSize)
       .offset(args.page * args.pageSize)
       .execute();
