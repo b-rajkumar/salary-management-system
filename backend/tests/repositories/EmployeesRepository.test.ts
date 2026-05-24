@@ -231,4 +231,48 @@ describe('EmployeesRepository', () => {
       expect(new Set(ids).size).toBe(30);
     });
   });
+
+  describe('update', () => {
+    test('updates and returns the full row with a fresh updatedAt', async () => {
+      const created = await repo.insert(input);
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      const updated = await repo.update(created.id, { ...input, firstName: 'Asha-Updated' });
+
+      expect(updated).not.toBeNull();
+      expect(updated!.id).toBe(created.id);
+      expect(updated!.firstName).toBe('Asha-Updated');
+      expect(updated!.updatedAt > created.updatedAt).toBe(true);
+      expect(updated!.createdAt).toBe(created.createdAt);
+    });
+
+    test('returns null when no row has the given id', async () => {
+      const result = await repo.update(999, input);
+
+      expect(result).toBeNull();
+    });
+
+    test('throws ConflictError("EMAIL_TAKEN") when the new email belongs to a different row', async () => {
+      const a = await repo.insert({ ...input, email: 'a@example.com' });
+
+      await repo.insert({ ...input, email: 'b@example.com' });
+
+      await expect(
+        repo.update(a.id, { ...input, email: 'b@example.com' }),
+      ).rejects.toMatchObject({
+        constructor: ConflictError,
+        code: 'EMAIL_TAKEN',
+      });
+    });
+
+    test('does not throw when the email is unchanged on the same row', async () => {
+      const created = await repo.insert(input);
+
+      const updated = await repo.update(created.id, { ...input, firstName: 'Same-Email-Different-Name' });
+
+      expect(updated!.firstName).toBe('Same-Email-Different-Name');
+      expect(updated!.email).toBe(input.email);
+    });
+  });
 });

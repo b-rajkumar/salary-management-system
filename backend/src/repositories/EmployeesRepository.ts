@@ -71,4 +71,23 @@ export class EmployeesRepository {
 
     return { rows, total: Number(countRow.total) };
   }
+
+  async update(id: number, input: EmployeeCreateInput): Promise<Employee | null> {
+    const updatedAt = new Date().toISOString();
+    try {
+      const row = await this.db
+        .updateTable('employees')
+        .set({ ...input, updatedAt })
+        .where('id', '=', id)
+        .returningAll()
+        .executeTakeFirst();
+
+      return row ?? null;
+    } catch (err) {
+      if (isUniqueEmailViolation(err)) {
+        throw new ConflictError('EMAIL_TAKEN', 'Email already in use');
+      }
+      throw err;
+    }
+  }
 }
