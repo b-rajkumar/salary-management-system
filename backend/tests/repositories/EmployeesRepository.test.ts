@@ -6,14 +6,7 @@ import { EmployeesRepository } from '../../src/repositories/EmployeesRepository'
 import { ConflictError } from '../../src/lib/errors';
 import type { DB } from '../../src/db/types';
 
-function setup(): EmployeesRepository {
-  const sqlite = new Database(':memory:');
-  migrate(sqlite, path.join(__dirname, '..', '..', 'migrations'));
-  const kysely = new Kysely<DB>({ dialect: new SqliteDialect({ database: sqlite }) });
-  return new EmployeesRepository(kysely);
-}
-
-const validInput = {
+const input = {
   firstName: 'Asha',
   lastName: 'Rao',
   email: 'asha@example.com',
@@ -25,19 +18,26 @@ const validInput = {
 };
 
 describe('EmployeesRepository', () => {
+  let repo: EmployeesRepository;
+
+  beforeEach(() => {
+    const sqlite = new Database(':memory:');
+    migrate(sqlite, path.join(__dirname, '..', '..', 'migrations'));
+    const kysely = new Kysely<DB>({ dialect: new SqliteDialect({ database: sqlite }) });
+    repo = new EmployeesRepository(kysely);
+  });
+
   test('insert returns the persisted row with id and timestamps', async () => {
-    const repo = setup();
-    const created = await repo.insert(validInput);
-    expect(created).toMatchObject(validInput);
+    const created = await repo.insert(input);
+    expect(created).toMatchObject(input);
     expect(created.id).toEqual(expect.any(Number));
     expect(typeof created.createdAt).toBe('string');
     expect(typeof created.updatedAt).toBe('string');
   });
 
   test('insert with a duplicate email throws ConflictError("EMAIL_TAKEN")', async () => {
-    const repo = setup();
-    await repo.insert(validInput);
-    await expect(repo.insert(validInput)).rejects.toMatchObject({
+    await repo.insert(input);
+    await expect(repo.insert(input)).rejects.toMatchObject({
       constructor: ConflictError,
       code: 'EMAIL_TAKEN',
     });
