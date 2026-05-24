@@ -88,6 +88,31 @@ Concretely, when a change in code or stack lands, the typical doc impact is:
 
 If a code change makes a sentence in any doc no longer true, that sentence is your problem to flag (and, once approved, to fix) in the same change. Drifted docs are worse than no docs.
 
+## Style
+
+Code style for this repo is documented in [`docs/style-guide.md`](./docs/style-guide.md). The mechanically-enforceable parts (notably the blank-line rule inside functions) are enforced by `npm run lint` / `npm run lint:fix`. Read the style guide before writing new code in this project; defer to it for naming, types, imports, errors, classes, and tests.
+
+## Verifying UI changes
+
+For any frontend change, don't stop at unit tests. Drive the running app in a real browser using the **Playwright MCP browser tools** and verify the user-facing flow:
+
+1. Start the backend with a fresh DB and run it in the background:
+   ```
+   rm -f backend/data/app.db* && npm run dev --workspace backend
+   ```
+2. Start the frontend in the background: `npm run dev --workspace frontend`.
+3. Wait for both: `curl -fsS http://localhost:3000/api/health` and `curl -fsS http://localhost:5173`.
+4. Use the Playwright MCP tools to navigate, fill forms, click buttons, and snapshot the page after each interaction:
+   - `mcp__plugin_playwright_playwright__browser_navigate`
+   - `mcp__plugin_playwright_playwright__browser_snapshot`
+   - `mcp__plugin_playwright_playwright__browser_click`
+   - `mcp__plugin_playwright_playwright__browser_fill_form`
+   - `mcp__plugin_playwright_playwright__browser_type`
+5. Cover the golden path and the failure paths (validation errors, server-side errors like 409 duplicate). For a form, the minimum is: empty submit blocks with inline errors, valid submit succeeds, an expected server error surfaces inline.
+6. Kill the background processes when done.
+
+Type-checking and tests verify *code* correctness; the browser drive verifies *feature* correctness. Both are required for UI work.
+
 ## Committing changes
 
 **Never commit without explicit confirmation.** Stage the changes, show the diff or a summary of what's about to land, and wait for me to say "commit" (or equivalent) before running `git commit`. This applies regardless of how routine the change looks — small commits, large commits, doc-only commits, all of them. The commit history is part of what's being evaluated, so I want to control its shape.
