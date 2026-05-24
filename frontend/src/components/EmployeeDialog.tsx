@@ -67,6 +67,13 @@ export function EmployeeDialog(props: Props) {
   return <CreateDialog {...props} />;
 }
 
+function formatTimestamp(s: string): string {
+  const iso = s.includes('T') ? s : `${s.replace(' ', 'T')}Z`;
+  const d = new Date(iso);
+
+  return Number.isNaN(d.getTime()) ? s : d.toISOString().slice(0, 19).replace('T', ' ');
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <Box>
@@ -95,8 +102,8 @@ function ViewBody({ employee }: { employee: Employee }) {
       </Field>
       <Field label="Hire date">{employee.hireDate}</Field>
       <Divider />
-      <Field label="Created">{employee.createdAt}</Field>
-      <Field label="Last updated">{employee.updatedAt}</Field>
+      <Field label="Created">{formatTimestamp(employee.createdAt)}</Field>
+      <Field label="Last updated">{formatTimestamp(employee.updatedAt)}</Field>
     </Stack>
   );
 }

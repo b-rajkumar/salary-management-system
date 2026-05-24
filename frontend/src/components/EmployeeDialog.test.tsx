@@ -110,6 +110,25 @@ describe('EmployeeDialog — view mode', () => {
     expect(screen.queryByLabelText('First name')).not.toBeInTheDocument();
   });
 
+  it('formats createdAt and updatedAt consistently regardless of input format', () => {
+    const employee = {
+      ...fakeEmployee,
+      // SQLite CURRENT_TIMESTAMP format
+      createdAt: '2024-01-15 09:12:00',
+      // JS Date().toISOString() format
+      updatedAt: '2026-05-24T14:32:15.123Z',
+    };
+
+    render(
+      <EmployeeDialog open intent="inspect" employee={employee} onClose={jest.fn()} onSaved={jest.fn()} />,
+    );
+
+    expect(screen.getByText('2024-01-15 09:12:00')).toBeInTheDocument();
+    expect(screen.getByText('2026-05-24 14:32:15')).toBeInTheDocument();
+    // Raw ISO string must not leak through.
+    expect(screen.queryByText('2026-05-24T14:32:15.123Z')).not.toBeInTheDocument();
+  });
+
   it('shows Close and Edit buttons (no Cancel / Save in view mode)', () => {
     render(
       <EmployeeDialog
