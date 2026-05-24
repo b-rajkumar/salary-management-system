@@ -5,6 +5,7 @@ import { Link, useLocation } from 'react-router-dom';
 export function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation();
   const value = location.pathname.startsWith('/insights') ? '/insights' : '/';
+
   return (
     <Box>
       <AppBar position="static" color="default" elevation={0}>

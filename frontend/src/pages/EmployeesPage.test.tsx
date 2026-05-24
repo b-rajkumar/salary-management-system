@@ -24,6 +24,7 @@ jest.mock('../components/AddEmployeeModal', () => ({
 describe('EmployeesPage', () => {
   it('clicking "Add Employee" opens the modal', async () => {
     const user = userEvent.setup();
+
     render(<EmployeesPage />);
 
     expect(screen.queryByTestId('mock-modal')).not.toBeInTheDocument();
@@ -35,6 +36,7 @@ describe('EmployeesPage', () => {
 
   it('onCreated flow shows a success Alert with "Added {firstName} {lastName}"', async () => {
     const user = userEvent.setup();
+
     render(<EmployeesPage />);
 
     await user.click(screen.getByRole('button', { name: 'Add Employee' }));

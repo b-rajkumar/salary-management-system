@@ -25,18 +25,22 @@ describe('migrate', () => {
     const tables = db
       .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name`)
       .all() as { name: string }[];
+
     expect(tables.map((t) => t.name)).toEqual(['_migrations', 'a', 'b']);
 
     const applied = db.prepare(`SELECT name FROM _migrations ORDER BY name`).all() as { name: string }[];
+
     expect(applied.map((r) => r.name)).toEqual(['001_a.sql', '002_b.sql']);
   });
 
   test('is idempotent — a second run is a no-op', () => {
     fs.writeFileSync(path.join(dir, '001_a.sql'), 'CREATE TABLE a (id INTEGER PRIMARY KEY);');
     const db = new Database(':memory:');
+
     migrate(db, dir);
     expect(() => migrate(db, dir)).not.toThrow();
     const count = db.prepare(`SELECT COUNT(*) AS n FROM _migrations`).get() as { n: number };
+
     expect(count.n).toBe(1);
   });
 });

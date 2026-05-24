@@ -4,17 +4,21 @@
   "version": "0.0.1",
   "workspaces": ["shared", "backend", "frontend"],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
-    "test":  "npm run test  --workspaces --if-present",
-    "dev":   "npm-run-all --parallel dev:shared dev:backend dev:frontend",
+    "build":    "npm run build --workspaces --if-present",
+    "test":     "npm run test  --workspaces --if-present",
+    "dev":      "npm-run-all --parallel dev:shared dev:backend dev:frontend",
     "dev:shared":   "npm run dev --workspace shared",
     "dev:backend":  "npm run dev --workspace backend",
-    "dev:frontend": "npm run dev --workspace frontend"
+    "dev:frontend": "npm run dev --workspace frontend",
+    "lint":     "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "devDependencies": {
+    "@typescript-eslint/parser": "^8.5.0",
+    "eslint": "^9.10.0",
     "npm-run-all": "^4.1.5",
-    "typescript": "^5.5.4",
-    "prettier": "^3.3.3"
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.4"
   },
   "engines": { "node": ">=20" }
 }

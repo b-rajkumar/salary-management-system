@@ -24,6 +24,7 @@ describe('EmployeesService', () => {
 
   test('create delegates to repo.insert and returns its result', async () => {
     const row = { id: 1, ...input, createdAt: 't', updatedAt: 't' };
+
     repo.insert.mockResolvedValue(row);
 
     const result = await service.create(input);

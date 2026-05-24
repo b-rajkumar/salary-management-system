@@ -12,6 +12,7 @@ const MIGRATIONS_DIR = path.join(__dirname, '..', 'migrations');
 
 export function buildApp(dbPath: string): { app: Express; db: DbHandle } {
   const db = createDb(dbPath);
+
   migrate(db.sqlite, MIGRATIONS_DIR);
 
   const employees = new EmployeesController(
@@ -19,6 +20,7 @@ export function buildApp(dbPath: string): { app: Express; db: DbHandle } {
   );
 
   const app = express();
+
   app.use(express.json());
   app.get('/api/health', (_req, res) => {
     res.status(200).json({ ok: true });

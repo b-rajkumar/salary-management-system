@@ -22,13 +22,16 @@ describe('EmployeesRepository', () => {
 
   beforeEach(() => {
     const sqlite = new Database(':memory:');
+
     migrate(sqlite, path.join(__dirname, '..', '..', 'migrations'));
     const kysely = new Kysely<DB>({ dialect: new SqliteDialect({ database: sqlite }) });
+
     repo = new EmployeesRepository(kysely);
   });
 
   test('insert returns the persisted row with id and timestamps', async () => {
     const created = await repo.insert(input);
+
     expect(created).toMatchObject(input);
     expect(created.id).toEqual(expect.any(Number));
     expect(typeof created.createdAt).toBe('string');

@@ -48,6 +48,7 @@ async function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
     window.HTMLInputElement.prototype,
     'value',
   )?.set;
+
   nativeValueSetter?.call(salaryInput, '1500000');
   salaryInput.dispatchEvent(new Event('input', { bubbles: true }));
   salaryInput.dispatchEvent(new Event('change', { bubbles: true }));
@@ -62,6 +63,7 @@ beforeEach(() => {
 describe('AddEmployeeModal', () => {
   it('submitting an empty form shows required errors and does not call createEmployee', async () => {
     const user = userEvent.setup();
+
     render(
       <AddEmployeeModal open onClose={jest.fn()} onCreated={jest.fn()} />,
     );

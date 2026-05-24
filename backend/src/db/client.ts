@@ -9,8 +9,10 @@ export interface DbHandle {
 
 export function createDb(dbPath: string): DbHandle {
   const sqlite = new Database(dbPath);
+
   sqlite.pragma('journal_mode = WAL');
   sqlite.pragma('foreign_keys = ON');
   const kysely = new Kysely<DB>({ dialect: new SqliteDialect({ database: sqlite }) });
+
   return { sqlite, kysely };
 }

@@ -26,6 +26,7 @@ describe('POST /api/employees', () => {
   beforeEach(() => {
     service = { create: jest.fn().mockResolvedValue(createdRow) };
     const controller = new EmployeesController(service as unknown as EmployeesService);
+
     app = express();
     app.use(express.json());
     app.use('/api/employees', employeesRouter(controller));
@@ -34,6 +35,7 @@ describe('POST /api/employees', () => {
 
   test('201 returns the created employee and calls service.create with the parsed body', async () => {
     const res = await request(app).post('/api/employees').send(validBody);
+
     expect(res.status).toBe(201);
     expect(res.body).toEqual(createdRow);
     expect(service.create).toHaveBeenCalledWith(validBody);
@@ -49,6 +51,7 @@ describe('POST /api/employees', () => {
     ['future hireDate',    { ...validBody, hireDate: '2999-01-01' }],
   ])('400 VALIDATION_ERROR for %s', async (_label, body) => {
     const res = await request(app).post('/api/employees').send(body);
+
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
     expect(service.create).not.toHaveBeenCalled();
@@ -57,6 +60,7 @@ describe('POST /api/employees', () => {
   test('409 EMAIL_TAKEN when service throws ConflictError', async () => {
     service.create.mockRejectedValue(new ConflictError('EMAIL_TAKEN', 'Email already in use'));
     const res = await request(app).post('/api/employees').send(validBody);
+
     expect(res.status).toBe(409);
     expect(res.body.error).toMatchObject({ code: 'EMAIL_TAKEN', message: 'Email already in use' });
   });

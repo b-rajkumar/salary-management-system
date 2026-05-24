@@ -20,6 +20,7 @@ export function migrate(db: Database.Database, migrationsDir: string): void {
     if (applied.has(file)) continue;
     const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf-8');
     const record = db.prepare(`INSERT INTO _migrations (name) VALUES (?)`);
+
     db.transaction(() => {
       db.exec(sql);
       record.run(file);

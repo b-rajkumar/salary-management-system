@@ -19,10 +19,13 @@ export async function request<T>(input: string, init?: RequestInit): Promise<T> 
     ...init,
     headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
   });
+
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as ApiErrorBody | null;
     const e = body?.error ?? { code: 'UNKNOWN', message: res.statusText };
+
     throw new ApiError(res.status, e.code, e.message, e.details);
   }
+
   return res.json() as Promise<T>;
 }

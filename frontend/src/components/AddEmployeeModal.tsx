@@ -17,6 +17,7 @@ import { z } from 'zod';
 const modalSchema = employeeCreateSchema.extend({
   salary: z.coerce.number({ invalid_type_error: 'Required' }).int('Whole numbers only').min(1, 'Must be at least 1'),
 });
+
 import { createEmployee } from '../api/employees';
 import { ApiError } from '../api/client';
 import { FormField } from './FormField';
@@ -58,6 +59,7 @@ export function AddEmployeeModal({ open, onClose, onCreated }: Props) {
     setSubmitError(null);
     try {
       const employee = await createEmployee(data as EmployeeCreateInput);
+
       reset(emptyDefaults);
       onCreated(employee);
     } catch (err) {
