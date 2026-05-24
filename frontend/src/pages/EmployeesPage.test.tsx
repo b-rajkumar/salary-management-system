@@ -1,6 +1,10 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { EmployeesPage } from './EmployeesPage';
+import { listEmployees } from '../api/employees';
+import type { Employee } from '@app/shared';
+
+jest.mock('../api/employees');
 
 jest.mock('../components/AddEmployeeModal', () => ({
   AddEmployeeModal: ({
@@ -21,7 +25,46 @@ jest.mock('../components/AddEmployeeModal', () => ({
     ) : null,
 }));
 
+const mockedList = jest.mocked(listEmployees);
+
+const fakeRow: Employee = {
+  id: 1,
+  firstName: 'Asha',
+  lastName: 'Rao',
+  email: 'asha@example.com',
+  jobTitle: 'Software Engineer',
+  department: 'Engineering',
+  country: 'IN',
+  salary: 1500000,
+  hireDate: '2024-01-15',
+  createdAt: '2024-01-15T00:00:00.000Z',
+  updatedAt: '2024-01-15T00:00:00.000Z',
+};
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockedList.mockResolvedValue({ rows: [], total: 0 });
+});
+
 describe('EmployeesPage', () => {
+  it('renders rows returned from the API', async () => {
+    mockedList.mockResolvedValueOnce({ rows: [fakeRow], total: 1 });
+
+    render(<EmployeesPage />);
+
+    await waitFor(() => expect(screen.getByText('asha@example.com')).toBeInTheDocument());
+    expect(screen.getByText('Asha')).toBeInTheDocument();
+  });
+
+  it('shows an error alert when the API rejects', async () => {
+    mockedList.mockReset();
+    mockedList.mockRejectedValueOnce(new Error('Failed to load employees'));
+
+    render(<EmployeesPage />);
+
+    expect(await screen.findByText('Failed to load employees')).toBeInTheDocument();
+  });
+
   it('clicking "Add Employee" opens the modal', async () => {
     const user = userEvent.setup();
 
@@ -34,15 +77,18 @@ describe('EmployeesPage', () => {
     expect(screen.getByTestId('mock-modal')).toBeInTheDocument();
   });
 
-  it('onCreated flow shows a success Alert with "Added {firstName} {lastName}"', async () => {
+  it('onCreated flow shows a success Alert and refetches the grid', async () => {
     const user = userEvent.setup();
 
     render(<EmployeesPage />);
+
+    await waitFor(() => expect(mockedList).toHaveBeenCalledTimes(1));
 
     await user.click(screen.getByRole('button', { name: 'Add Employee' }));
     await user.click(screen.getByRole('button', { name: 'fire onCreated' }));
 
     expect(await screen.findByText('Added Asha Rao')).toBeInTheDocument();
     expect(screen.queryByTestId('mock-modal')).not.toBeInTheDocument();
+    await waitFor(() => expect(mockedList).toHaveBeenCalledTimes(2));
   });
 });

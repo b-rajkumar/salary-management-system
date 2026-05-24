@@ -102,6 +102,7 @@ describe('EmployeesRepository', () => {
       const page2 = await repo.list({ page: 2, pageSize: 10 });
 
       const ids = [...page0.rows, ...page1.rows, ...page2.rows].map((r) => r.id);
+
       expect(ids).toEqual([...ids].sort((a, b) => a - b));
       expect(new Set(ids).size).toBe(30);
     });

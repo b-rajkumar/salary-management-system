@@ -21,6 +21,7 @@ describe('seed', () => {
     const result = seed({ db, count: 100 });
 
     const { n } = db.prepare('SELECT COUNT(*) AS n FROM employees').get() as { n: number };
+
     expect(n).toBe(100);
     expect(result.inserted).toBe(100);
     expect(typeof result.ms).toBe('number');
@@ -35,6 +36,7 @@ describe('seed', () => {
       .prepare('SELECT email FROM employees')
       .all() as { email: string }[];
     const unique = new Set(rows.map((r) => r.email));
+
     expect(unique.size).toBe(100);
   });
 
@@ -47,6 +49,7 @@ describe('seed', () => {
       .prepare('SELECT country FROM employees')
       .all() as { country: string }[];
     const allowed = new Set(Object.keys(COUNTRIES));
+
     for (const r of rows) {
       expect(allowed.has(r.country)).toBe(true);
     }
@@ -60,6 +63,7 @@ describe('seed', () => {
     const rows = db
       .prepare('SELECT salary FROM employees')
       .all() as { salary: number }[];
+
     for (const r of rows) {
       expect(Number.isInteger(r.salary)).toBe(true);
       expect(r.salary).toBeGreaterThanOrEqual(1);
@@ -73,6 +77,7 @@ describe('seed', () => {
     seed({ db, count: 30, reset: true });
 
     const { n } = db.prepare('SELECT COUNT(*) AS n FROM employees').get() as { n: number };
+
     expect(n).toBe(30);
   });
 });
