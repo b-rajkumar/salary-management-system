@@ -14,11 +14,11 @@ const input = {
 };
 
 describe('EmployeesService', () => {
-  let repo: { insert: jest.Mock };
+  let repo: { insert: jest.Mock; list: jest.Mock };
   let service: EmployeesService;
 
   beforeEach(() => {
-    repo = { insert: jest.fn() };
+    repo = { insert: jest.fn(), list: jest.fn() };
     service = new EmployeesService(repo as unknown as EmployeesRepository);
   });
 
@@ -36,5 +36,16 @@ describe('EmployeesService', () => {
   test('create propagates ConflictError thrown by the repo', async () => {
     repo.insert.mockRejectedValue(new ConflictError('EMAIL_TAKEN', 'taken'));
     await expect(service.create(input)).rejects.toBeInstanceOf(ConflictError);
+  });
+
+  test('list delegates to repo.list and returns its result', async () => {
+    const payload = { rows: [{ id: 1, firstName: 'A' } as unknown], total: 1 };
+
+    repo.list.mockResolvedValue(payload);
+
+    const result = await service.list({ page: 2, pageSize: 25 });
+
+    expect(repo.list).toHaveBeenCalledWith({ page: 2, pageSize: 25 });
+    expect(result).toBe(payload);
   });
 });
