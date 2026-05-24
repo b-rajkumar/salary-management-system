@@ -12,5 +12,9 @@ export function employeesRouter(controller: EmployeesController): Router {
     controller.create(req, res).catch(next);
   });
 
+  r.put('/:id', (req, res, next) => {
+    controller.update(req, res).catch(next);
+  });
+
   return r;
 }

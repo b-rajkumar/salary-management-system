@@ -10,6 +10,10 @@ const listQuerySchema = z.object({
   q:        z.string().trim().max(100).optional().transform((v) => (v === '' ? undefined : v)),
 });
 
+const idParamSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});
+
 export class EmployeesController {
   constructor(private readonly service: EmployeesService) {}
 
@@ -35,5 +39,23 @@ export class EmployeesController {
     const result = await this.service.list(parsed.data);
 
     res.status(200).json(result);
+  }
+
+  async update(req: Request, res: Response): Promise<void> {
+    const parsedParams = idParamSchema.safeParse(req.params);
+
+    if (!parsedParams.success) {
+      throw new ValidationError(parsedParams.error.flatten());
+    }
+
+    const parsedBody = employeeCreateSchema.safeParse(req.body);
+
+    if (!parsedBody.success) {
+      throw new ValidationError(parsedBody.error.flatten());
+    }
+
+    const employee = await this.service.update(parsedParams.data.id, parsedBody.data);
+
+    res.status(200).json(employee);
   }
 }

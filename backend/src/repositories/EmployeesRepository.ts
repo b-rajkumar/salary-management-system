@@ -74,6 +74,7 @@ export class EmployeesRepository {
 
   async update(id: number, input: EmployeeCreateInput): Promise<Employee | null> {
     const updatedAt = new Date().toISOString();
+
     try {
       const row = await this.db
         .updateTable('employees')

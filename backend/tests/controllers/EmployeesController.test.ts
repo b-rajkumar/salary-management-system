@@ -3,7 +3,7 @@ import request from 'supertest';
 import { EmployeesController } from '../../src/controllers/EmployeesController';
 import { employeesRouter } from '../../src/routes/employees';
 import { errorMiddleware } from '../../src/lib/errorMiddleware';
-import { ConflictError } from '../../src/lib/errors';
+import { ConflictError, NotFoundError } from '../../src/lib/errors';
 import type { EmployeesService } from '../../src/services/EmployeesService';
 
 const validBody = {
@@ -135,5 +135,73 @@ describe('GET /api/employees', () => {
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
     expect(service.list).not.toHaveBeenCalled();
+  });
+});
+
+describe('PUT /api/employees/:id', () => {
+  let service: { create: jest.Mock; list: jest.Mock; update: jest.Mock };
+  let app: Express;
+
+  const updatedRow = { id: 1, ...validBody, firstName: 'Asha-Updated', createdAt: 't', updatedAt: 'u' };
+
+  beforeEach(() => {
+    service = {
+      create: jest.fn(),
+      list: jest.fn(),
+      update: jest.fn().mockResolvedValue(updatedRow),
+    };
+    const controller = new EmployeesController(service as unknown as EmployeesService);
+
+    app = express();
+    app.use(express.json());
+    app.use('/api/employees', employeesRouter(controller));
+    app.use(errorMiddleware);
+  });
+
+  test('200 returns the updated employee and calls service.update with id + body', async () => {
+    const body = { ...validBody, firstName: 'Asha-Updated' };
+    const res = await request(app).put('/api/employees/1').send(body);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(updatedRow);
+    expect(service.update).toHaveBeenCalledWith(1, body);
+  });
+
+  test.each([
+    ['missing firstName', { ...validBody, firstName: '' }],
+    ['malformed email',   { ...validBody, email: 'not-an-email' }],
+    ['unknown country',   { ...validBody, country: 'ZZ' }],
+    ['salary = 0',        { ...validBody, salary: 0 }],
+    ['future hireDate',   { ...validBody, hireDate: '2999-01-01' }],
+  ])('400 VALIDATION_ERROR for %s', async (_label, body) => {
+    const res = await request(app).put('/api/employees/1').send(body);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(service.update).not.toHaveBeenCalled();
+  });
+
+  test('400 VALIDATION_ERROR when :id is not a positive integer', async () => {
+    const res = await request(app).put('/api/employees/abc').send(validBody);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(service.update).not.toHaveBeenCalled();
+  });
+
+  test('404 EMPLOYEE_NOT_FOUND when service throws NotFoundError', async () => {
+    service.update.mockRejectedValueOnce(new NotFoundError('EMPLOYEE_NOT_FOUND', 'Employee 999 not found'));
+    const res = await request(app).put('/api/employees/999').send(validBody);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('EMPLOYEE_NOT_FOUND');
+  });
+
+  test('409 EMAIL_TAKEN when service throws ConflictError', async () => {
+    service.update.mockRejectedValueOnce(new ConflictError('EMAIL_TAKEN', 'Email already in use'));
+    const res = await request(app).put('/api/employees/1').send(validBody);
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatchObject({ code: 'EMAIL_TAKEN' });
   });
 });
