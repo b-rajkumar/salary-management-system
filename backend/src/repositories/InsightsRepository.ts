@@ -42,4 +42,25 @@ export class InsightsRepository {
       newHiresLast12Months: Number(row.newHiresLast12Months),
     };
   }
+
+  async departmentsByCountry(country: string): Promise<DepartmentBreakdownRow[]> {
+    const rows = await this.db
+      .selectFrom('employees')
+      .where('country', '=', country)
+      .select([
+        'department',
+        sql<number>`COUNT(*)`.as('headcount'),
+        sql<number>`CAST(ROUND(AVG(salary)) AS INTEGER)`.as('avgSalary'),
+      ])
+      .groupBy('department')
+      .orderBy('headcount', 'desc')
+      .orderBy('department', 'asc')
+      .execute();
+
+    return rows.map((r) => ({
+      department: r.department,
+      headcount: Number(r.headcount),
+      avgSalary: Number(r.avgSalary),
+    }));
+  }
 }

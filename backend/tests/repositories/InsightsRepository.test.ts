@@ -109,3 +109,42 @@ describe('InsightsRepository.aggregateByCountry', () => {
     expect(result.newHiresLast12Months).toBe(2);
   });
 });
+
+describe('InsightsRepository.departmentsByCountry', () => {
+  let repo: InsightsRepository;
+  let employees: EmployeesRepository;
+
+  beforeEach(() => {
+    const sqlite = new Database(':memory:');
+
+    migrate(sqlite, path.join(__dirname, '..', '..', 'migrations'));
+    const kysely = new Kysely<DB>({ dialect: new SqliteDialect({ database: sqlite }) });
+
+    repo = new InsightsRepository(kysely);
+    employees = new EmployeesRepository(kysely);
+  });
+
+  test('returns [] when no employees in the country', async () => {
+    await employees.insert({ ...baseEmployee, email: 'a@x.com', country: 'US' });
+
+    const result = await repo.departmentsByCountry('IN');
+
+    expect(result).toEqual([]);
+  });
+
+  test('returns rows sorted by headcount desc, then department asc, with avgSalary rounded', async () => {
+    await employees.insert({ ...baseEmployee, email: 'e1@x.com', country: 'IN', department: 'Engineering', salary: 2000000 });
+    await employees.insert({ ...baseEmployee, email: 'e2@x.com', country: 'IN', department: 'Engineering', salary: 2200000 });
+    await employees.insert({ ...baseEmployee, email: 's1@x.com', country: 'IN', department: 'Sales',       salary: 1400000 });
+    await employees.insert({ ...baseEmployee, email: 'p1@x.com', country: 'IN', department: 'Product',     salary: 1800000 });
+    await employees.insert({ ...baseEmployee, email: 'us@x.com', country: 'US', department: 'Engineering', salary: 9999999 });
+
+    const result = await repo.departmentsByCountry('IN');
+
+    expect(result).toEqual([
+      { department: 'Engineering', headcount: 2, avgSalary: 2100000 },
+      { department: 'Product',     headcount: 1, avgSalary: 1800000 },
+      { department: 'Sales',       headcount: 1, avgSalary: 1400000 },
+    ]);
+  });
+});
