@@ -1,0 +1,20 @@
+{
+  "name": "salary-management-system",
+  "private": true,
+  "version": "0.0.1",
+  "workspaces": ["shared", "backend", "frontend"],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test":  "npm run test  --workspaces --if-present",
+    "dev":   "npm-run-all --parallel dev:shared dev:backend dev:frontend",
+    "dev:shared":   "npm run dev --workspace shared",
+    "dev:backend":  "npm run dev --workspace backend",
+    "dev:frontend": "npm run dev --workspace frontend"
+  },
+  "devDependencies": {
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.5.4",
+    "prettier": "^3.3.3"
+  },
+  "engines": { "node": ">=20" }
+}
