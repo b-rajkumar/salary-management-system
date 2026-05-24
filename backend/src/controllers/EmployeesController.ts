@@ -1,7 +1,13 @@
 import type { Request, Response } from 'express';
+import { z } from 'zod';
 import { employeeCreateSchema } from '@app/shared';
 import { ValidationError } from '../lib/errors';
 import type { EmployeesService } from '../services/EmployeesService';
+
+const listQuerySchema = z.object({
+  page:     z.coerce.number().int().min(0).default(0),
+  pageSize: z.coerce.number().int().min(1).max(200).default(50),
+});
 
 export class EmployeesController {
   constructor(private readonly service: EmployeesService) {}
@@ -16,5 +22,17 @@ export class EmployeesController {
     const employee = await this.service.create(parsed.data);
 
     res.status(201).json(employee);
+  }
+
+  async list(req: Request, res: Response): Promise<void> {
+    const parsed = listQuerySchema.safeParse(req.query);
+
+    if (!parsed.success) {
+      throw new ValidationError(parsed.error.flatten());
+    }
+
+    const result = await this.service.list(parsed.data);
+
+    res.status(200).json(result);
   }
 }

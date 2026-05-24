@@ -4,6 +4,10 @@ import type { EmployeesController } from '../controllers/EmployeesController';
 export function employeesRouter(controller: EmployeesController): Router {
   const r = Router();
 
+  r.get('/', (req, res, next) => {
+    controller.list(req, res).catch(next);
+  });
+
   r.post('/', (req, res, next) => {
     controller.create(req, res).catch(next);
   });

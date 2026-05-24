@@ -20,11 +20,11 @@ const validBody = {
 const createdRow = { id: 1, ...validBody, createdAt: 't', updatedAt: 't' };
 
 describe('POST /api/employees', () => {
-  let service: { create: jest.Mock };
+  let service: { create: jest.Mock; list: jest.Mock };
   let app: Express;
 
   beforeEach(() => {
-    service = { create: jest.fn().mockResolvedValue(createdRow) };
+    service = { create: jest.fn().mockResolvedValue(createdRow), list: jest.fn() };
     const controller = new EmployeesController(service as unknown as EmployeesService);
 
     app = express();
@@ -63,5 +63,54 @@ describe('POST /api/employees', () => {
 
     expect(res.status).toBe(409);
     expect(res.body.error).toMatchObject({ code: 'EMAIL_TAKEN', message: 'Email already in use' });
+  });
+});
+
+describe('GET /api/employees', () => {
+  let service: { create: jest.Mock; list: jest.Mock };
+  let app: Express;
+
+  beforeEach(() => {
+    service = {
+      create: jest.fn(),
+      list: jest.fn().mockResolvedValue({ rows: [], total: 0 }),
+    };
+    const controller = new EmployeesController(service as unknown as EmployeesService);
+
+    app = express();
+    app.use(express.json());
+    app.use('/api/employees', employeesRouter(controller));
+    app.use(errorMiddleware);
+  });
+
+  test('200 with default page/pageSize when no query params', async () => {
+    const res = await request(app).get('/api/employees');
+
+    expect(res.status).toBe(200);
+    expect(service.list).toHaveBeenCalledWith({ page: 0, pageSize: 50 });
+    expect(res.body).toEqual({ rows: [], total: 0 });
+  });
+
+  test('200 with explicit page and pageSize', async () => {
+    service.list.mockResolvedValueOnce({ rows: [createdRow], total: 1 });
+
+    const res = await request(app).get('/api/employees?page=2&pageSize=20');
+
+    expect(res.status).toBe(200);
+    expect(service.list).toHaveBeenCalledWith({ page: 2, pageSize: 20 });
+    expect(res.body.total).toBe(1);
+  });
+
+  test.each([
+    'page=-1',
+    'pageSize=0',
+    'pageSize=201',
+    'page=abc',
+  ])('400 VALIDATION_ERROR for query %s', async (query) => {
+    const res = await request(app).get(`/api/employees?${query}`);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(service.list).not.toHaveBeenCalled();
   });
 });
