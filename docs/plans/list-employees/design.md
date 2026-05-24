@@ -2,11 +2,11 @@
 
 **Date:** 2026-05-24
 **Status:** Draft — pending user review
-**Slice:** Second vertical slice. Adds the 10k seed script and a paginated employee list.
+**Slice:** Second vertical slice. Adds the 10k seed script and a paginated, searchable employee list.
 
-Companion to [PRD §5 FR-2](../../prd.md) and [Engineering Design](../../engineering-design.md). This document is the **FR-2 MVP cut** of those — what we ship now, what we explicitly defer.
+Companion to [PRD §5 FR-2](../../prd.md) and [Engineering Design](../../engineering-design.md). This document is the **FR-2 cut** of those — what we ship now, what we explicitly defer.
 
-The PRD documents the eventual feature: paginated **and** sortable **and** searchable. This slice ships only the paginated part. Sort and search land in a follow-up slice once the pagination loop is proven against real volume.
+The PRD documents the eventual feature: paginated **and** sortable **and** searchable. This slice ships pagination + case-insensitive search. **Column sort** is deferred to a follow-up slice (`sort-employees`).
 
 ---
 
@@ -95,7 +95,7 @@ Both backend (return type of `EmployeesService.list`) and frontend (return type 
   - `selectFrom('employees').selectAll().orderBy('id', 'desc').limit(pageSize).offset(page * pageSize).execute()`
   - `selectFrom('employees').select(db.fn.countAll<number>().as('total')).executeTakeFirstOrThrow()`
   Returns `{ rows, total }`. No driver-specific errors expected; no try/catch needed.
-- **`EmployeesService.list(args)`** — pass-through to the repository for this slice. The layer stays so the next slice can grow it (sort whitelist enforcement, search predicate composition) without controller churn.
+- **`EmployeesService.list(args)`** — pass-through to the repository for this slice. The layer stays so the next slice can grow it (sort whitelist enforcement) without controller churn.
 - **`EmployeesController.list(req, res)`** — parses the query string through the schema below, calls the service, returns `200` with `{ rows, total }`. Validation failures throw `ValidationError` and the existing middleware maps them to `400`.
 
 ### Query-param schema
@@ -393,7 +393,7 @@ The PRD and decisions doc already settle these; restating so the implementing en
 - No FX conversion. Salary comparison across currencies happens only on the insights page (per-country, same currency); salary sort in the list is permanently excluded.
 - No soft delete, no salary history.
 - No row actions (edit/delete) in this slice — FR-3 / FR-4.
-- No sort, search, or filter UI in this slice — sort and search ship in the follow-up slice; filters are not in the PRD.
+- No sort or filter UI in this slice — sort ships in the follow-up slice (`sort-employees`); filters are not in the PRD.
 - No Docker, no Render deploy in this slice.
 
 ---
