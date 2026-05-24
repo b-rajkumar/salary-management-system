@@ -36,7 +36,8 @@ export function EmployeeDetailsModal({ open, employee, onClose }: Props) {
       <DialogTitle id="employee-details-title">Employee details</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
-          <Field label="Name">{`${employee.firstName} ${employee.lastName}`}</Field>
+          <Field label="First name">{employee.firstName}</Field>
+          <Field label="Last name">{employee.lastName}</Field>
           <Field label="Email">{employee.email}</Field>
           <Field label="Job title">{employee.jobTitle}</Field>
           <Field label="Department">{employee.department}</Field>

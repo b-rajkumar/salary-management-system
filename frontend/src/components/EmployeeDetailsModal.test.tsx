@@ -18,11 +18,14 @@ const employee: Employee = {
 };
 
 describe('EmployeeDetailsModal', () => {
-  it('renders all employee fields when open', () => {
+  it('renders all employee fields with first/last name split when open', () => {
     render(<EmployeeDetailsModal open employee={employee} onClose={jest.fn()} />);
 
     expect(screen.getByRole('dialog', { name: /Employee details/i })).toBeInTheDocument();
-    expect(screen.getByText('Asha Rao')).toBeInTheDocument();
+    expect(screen.getByText('First name')).toBeInTheDocument();
+    expect(screen.getByText('Asha')).toBeInTheDocument();
+    expect(screen.getByText('Last name')).toBeInTheDocument();
+    expect(screen.getByText('Rao')).toBeInTheDocument();
     expect(screen.getByText('asha.rao@example.com')).toBeInTheDocument();
     expect(screen.getByText('Software Engineer')).toBeInTheDocument();
     expect(screen.getByText('Engineering')).toBeInTheDocument();
