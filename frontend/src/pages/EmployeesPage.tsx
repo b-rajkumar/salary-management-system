@@ -103,7 +103,7 @@ export function EmployeesPage() {
 
       {error && <Alert severity="error">{error}</Alert>}
 
-      {data !== null && !isFirstRunEmpty && (
+      {(data !== null || error) && !isFirstRunEmpty && (
         <Stack direction="row" spacing={2} alignItems="center">
           <TextField
             size="small"

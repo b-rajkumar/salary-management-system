@@ -82,6 +82,16 @@ describe('EmployeesPage', () => {
     expect(await screen.findByText('Failed to load employees')).toBeInTheDocument();
   });
 
+  it('keeps the Add Employee button reachable when the initial fetch fails', async () => {
+    mockedList.mockReset();
+    mockedList.mockRejectedValueOnce(new Error('Failed to load employees'));
+
+    render(<EmployeesPage />);
+
+    await screen.findByText('Failed to load employees');
+    expect(screen.getByRole('button', { name: 'Add Employee' })).toBeInTheDocument();
+  });
+
   it('clicking the top-right "Add Employee" opens the dialog in create intent', async () => {
     mockedList.mockResolvedValueOnce({ rows: [fakeRow], total: 1 });
     const user = userEvent.setup();
