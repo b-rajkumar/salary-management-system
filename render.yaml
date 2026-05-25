@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: salary-management-system
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: SEED_ON_EMPTY
+        value: "1"
+      - key: NODE_ENV
+        value: production
