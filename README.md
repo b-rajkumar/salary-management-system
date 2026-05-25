@@ -134,6 +134,8 @@ docker compose up
 
 The container seeds 10,000 employees on first boot. Data is ephemeral by design — matching the Render runtime — so `docker compose down && docker compose up` resets and re-seeds.
 
+> **Note:** Ctrl+C on `docker compose up` only *stops* the container — it does not remove it. A subsequent `docker compose up` will restart the same container with its existing `/data/app.db` intact (and seed-on-empty will be a no-op because the table is non-empty). To get a fresh seeded state, use `docker compose down` (removes the container) followed by `docker compose up`, or `docker compose up --force-recreate`.
+
 To run the empty-state UI instead:
 
 ```
