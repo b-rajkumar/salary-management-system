@@ -9,6 +9,8 @@ const FRONTEND_DIST = path.join(__dirname, '..', '..', 'frontend', 'dist');
 const dbPath = process.env.DATABASE_PATH ?? path.join(process.cwd(), 'data', 'app.db');
 const port = parseInt(process.env.PORT ?? '3000', 10);
 
+fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+
 function readNames(file: string): string[] {
   return fs.readFileSync(file, 'utf-8').split('\n').map((s) => s.trim()).filter(Boolean);
 }
