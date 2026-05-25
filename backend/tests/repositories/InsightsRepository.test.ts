@@ -17,6 +17,8 @@ const baseEmployee = {
   hireDate: '2024-01-15',
 };
 
+const FIXED_NOW = new Date('2026-05-25T00:00:00.000Z');
+
 describe('InsightsRepository.aggregateByCountry', () => {
   let repo: InsightsRepository;
   let employees: EmployeesRepository;
@@ -27,7 +29,7 @@ describe('InsightsRepository.aggregateByCountry', () => {
     migrate(sqlite, path.join(__dirname, '..', '..', 'migrations'));
     const kysely = new Kysely<DB>({ dialect: new SqliteDialect({ database: sqlite }) });
 
-    repo = new InsightsRepository(kysely);
+    repo = new InsightsRepository(kysely, () => FIXED_NOW);
     employees = new EmployeesRepository(kysely);
   });
 
@@ -77,32 +79,19 @@ describe('InsightsRepository.aggregateByCountry', () => {
   });
 
   test('computes avgTenureYears from hireDate', async () => {
-    const twoYearsAgo = new Date();
-
-    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
-    await employees.insert({
-      ...baseEmployee, email: 'a@x.com', country: 'IN',
-      hireDate: twoYearsAgo.toISOString().slice(0, 10),
-    });
+    // 2024-05-25 -> 2026-05-25 is 730 calendar days. 730 / 365.25 = 1.998630...
+    await employees.insert({ ...baseEmployee, email: 'a@x.com', country: 'IN', hireDate: '2024-05-25' });
 
     const result = await repo.aggregateByCountry('IN');
 
-    expect(result.avgTenureYears).not.toBeNull();
-    expect(result.avgTenureYears!).toBeGreaterThan(1.9);
-    expect(result.avgTenureYears!).toBeLessThan(2.1);
+    expect(result.avgTenureYears).toBeCloseTo(730 / 365.25, 10);
   });
 
   test('counts only employees hired within the last 12 months for newHiresLast12Months', async () => {
-    const recent = new Date();
-
-    recent.setMonth(recent.getMonth() - 3);
-    const old = new Date();
-
-    old.setFullYear(old.getFullYear() - 2);
-
-    await employees.insert({ ...baseEmployee, email: 'r1@x.com', country: 'IN', hireDate: recent.toISOString().slice(0, 10) });
-    await employees.insert({ ...baseEmployee, email: 'r2@x.com', country: 'IN', hireDate: recent.toISOString().slice(0, 10) });
-    await employees.insert({ ...baseEmployee, email: 'old@x.com', country: 'IN', hireDate: old.toISOString().slice(0, 10) });
+    // Cutoff is 2025-05-25 (12 months before FIXED_NOW).
+    await employees.insert({ ...baseEmployee, email: 'before@x.com', country: 'IN', hireDate: '2025-05-24' });
+    await employees.insert({ ...baseEmployee, email: 'on@x.com',     country: 'IN', hireDate: '2025-05-25' });
+    await employees.insert({ ...baseEmployee, email: 'after@x.com',  country: 'IN', hireDate: '2025-08-01' });
 
     const result = await repo.aggregateByCountry('IN');
 

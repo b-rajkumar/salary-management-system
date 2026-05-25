@@ -25,8 +25,13 @@ interface AggregateRow {
   newHiresLast12Months: number;
 }
 
+export type Clock = () => Date;
+
 export class InsightsRepository {
-  constructor(private readonly db: Kysely<DB>) {}
+  constructor(
+    private readonly db: Kysely<DB>,
+    private readonly clock: Clock = () => new Date(),
+  ) {}
 
   async aggregateByCountry(country: string): Promise<CountryAggregate> {
     const row = await this.buildAggregateQuery({ country }).executeTakeFirstOrThrow();
@@ -74,6 +79,10 @@ export class InsightsRepository {
   }
 
   private buildAggregateQuery(filter: { country: string; jobTitle?: string }) {
+    const now = this.clock();
+    const nowDateString = toIsoDate(now);
+    const cutoffDateString = toIsoDate(subMonths(now, 12));
+
     let q = this.db
       .selectFrom('employees')
       .where('country', '=', filter.country)
@@ -82,8 +91,8 @@ export class InsightsRepository {
         fn.min<number | null>('salary').as('min'),
         fn.max<number | null>('salary').as('max'),
         sql<number | null>`CAST(ROUND(AVG(salary)) AS INTEGER)`.as('avg'),
-        sql<number | null>`AVG((julianday('now') - julianday(hireDate)) / 365.25)`.as('avgTenureYears'),
-        sql<number>`COALESCE(SUM(CASE WHEN hireDate >= date('now','-12 months') THEN 1 ELSE 0 END), 0)`.as('newHiresLast12Months'),
+        sql<number | null>`AVG((julianday(${nowDateString}) - julianday(hireDate)) / 365.25)`.as('avgTenureYears'),
+        sql<number>`COALESCE(SUM(CASE WHEN hireDate >= ${cutoffDateString} THEN 1 ELSE 0 END), 0)`.as('newHiresLast12Months'),
       ]);
 
     if (filter.jobTitle !== undefined) {
@@ -103,4 +112,16 @@ export class InsightsRepository {
       newHiresLast12Months: Number(row.newHiresLast12Months),
     };
   }
+}
+
+function toIsoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function subMonths(d: Date, months: number): Date {
+  const out = new Date(d);
+
+  out.setUTCMonth(out.getUTCMonth() - months);
+
+  return out;
 }
