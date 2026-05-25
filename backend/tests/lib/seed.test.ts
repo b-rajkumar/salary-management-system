@@ -2,7 +2,7 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { COUNTRIES } from '@app/shared';
 import { migrate } from '../../src/lib/migrate';
-import { seed } from '../../scripts/seed';
+import { seed } from '../../src/lib/seed';
 
 const MIGRATIONS_DIR = path.join(__dirname, '..', '..', 'migrations');
 
