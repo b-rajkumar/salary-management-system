@@ -122,7 +122,7 @@ Deliberately deferred:
 
 ## Deploy / run as a container
 
-A live deployment runs on Render free tier — URL added once the deploy lands.
+A live deployment runs on Render free tier: **https://salary-management-system-o22x.onrender.com/**
 
 **Run locally with Docker:**
 
