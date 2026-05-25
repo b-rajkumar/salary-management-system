@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Stack, Typography, Button, Alert, Box, TextField, Snackbar } from '@mui/material';
+import { Stack, Typography, Button, Alert, Box, TextField, Snackbar, CircularProgress } from '@mui/material';
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import { COUNTRIES, type Employee } from '@app/shared';
 import { EmployeeDialog } from '../components/EmployeeDialog';
@@ -38,8 +38,8 @@ export function EmployeesPage() {
   const { data, isLoading, error, refresh } = useEmployeesList(page, pageSize, debouncedQ);
 
   const hasQuery = debouncedQ.length > 0;
-  const isFirstRunEmpty = !isLoading && !error && !hasQuery && data.total === 0;
-  const isNoMatches    = !isLoading && !error &&  hasQuery && data.total === 0;
+  const isFirstRunEmpty = data !== null && !error && !hasQuery && data.total === 0;
+  const isNoMatches    = data !== null && !error &&  hasQuery && data.total === 0;
 
   const columns: GridColDef<Employee>[] = [
     {
@@ -95,7 +95,15 @@ export function EmployeesPage() {
         </Alert>
       )}
 
-      {!isFirstRunEmpty && (
+      {data === null && !error && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
+          <CircularProgress />
+        </Box>
+      )}
+
+      {error && <Alert severity="error">{error}</Alert>}
+
+      {data !== null && !isFirstRunEmpty && (
         <Stack direction="row" spacing={2} alignItems="center">
           <TextField
             size="small"
@@ -110,8 +118,6 @@ export function EmployeesPage() {
           </Button>
         </Stack>
       )}
-
-      {error && <Alert severity="error">{error}</Alert>}
 
       {isFirstRunEmpty && (
         <Stack spacing={2} alignItems="center" sx={{ py: 10 }}>
@@ -138,7 +144,7 @@ export function EmployeesPage() {
         </Stack>
       )}
 
-      {!isFirstRunEmpty && !isNoMatches && (
+      {data !== null && !isFirstRunEmpty && !isNoMatches && (
         <Box sx={{ height: 640 }}>
           <DataGrid
             rows={data.rows}
@@ -210,7 +216,7 @@ export function EmployeesPage() {
             setDialogState(null);
           }
           setDeleteTarget(null);
-          if (data.rows.length === 1 && page > 0) {
+          if (data?.rows.length === 1 && page > 0) {
             setPage(page - 1);
           } else {
             refresh();

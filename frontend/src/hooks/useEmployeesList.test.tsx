@@ -11,12 +11,14 @@ beforeEach(() => {
 });
 
 describe('useEmployeesList', () => {
-  test('fetches on mount and exposes data and loading state', async () => {
+  test('starts with data=null and isLoading=true, then exposes data after the fetch resolves', async () => {
     mockedList.mockResolvedValueOnce({ rows: [], total: 0 });
 
     const { result } = renderHook(() => useEmployeesList(0, 50));
 
     expect(result.current.isLoading).toBe(true);
+    expect(result.current.data).toBeNull();
+
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.data).toEqual({ rows: [], total: 0 });
     expect(result.current.error).toBeNull();

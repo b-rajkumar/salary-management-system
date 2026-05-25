@@ -3,14 +3,14 @@ import type { EmployeesListResponse } from '@app/shared';
 import { listEmployees } from '../api/employees';
 
 export interface UseEmployeesListResult {
-  data: EmployeesListResponse;
+  data: EmployeesListResponse | null;
   isLoading: boolean;
   error: string | null;
   refresh: () => void;
 }
 
 export function useEmployeesList(page: number, pageSize: number, q = ''): UseEmployeesListResult {
-  const [data, setData] = useState<EmployeesListResponse>({ rows: [], total: 0 });
+  const [data, setData] = useState<EmployeesListResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);

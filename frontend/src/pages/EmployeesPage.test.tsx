@@ -105,6 +105,22 @@ describe('EmployeesPage', () => {
     expect(screen.queryByRole('columnheader', { name: 'Name' })).not.toBeInTheDocument();
   });
 
+  it('does not flash the grid or the empty CTA while the initial fetch is in flight', async () => {
+    let resolveFetch: (v: { rows: Employee[]; total: number }) => void = () => {};
+
+    mockedList.mockReset();
+    mockedList.mockReturnValueOnce(new Promise((r) => { resolveFetch = r; }));
+
+    render(<EmployeesPage />);
+
+    expect(screen.queryByText('No employees yet')).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Name' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add Employee' })).not.toBeInTheDocument();
+
+    resolveFetch({ rows: [], total: 0 });
+    await screen.findByText('No employees yet');
+  });
+
   it('the empty-state Add Employee button opens the create dialog', async () => {
     const user = userEvent.setup();
 
