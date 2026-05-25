@@ -1,0 +1,15 @@
+.git
+.gitignore
+node_modules
+**/node_modules
+**/dist
+backend/data
+**/*.db
+**/*.db-shm
+**/*.db-wal
+docs
+*.md
+.env*
+.vscode
+.idea
+.DS_Store
