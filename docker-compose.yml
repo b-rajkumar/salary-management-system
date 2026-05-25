@@ -1,0 +1,9 @@
+services:
+  app:
+    build: .
+    image: salary-management-system:local
+    ports:
+      - "3000:3000"
+    environment:
+      SEED_ON_EMPTY: "${SEED_ON_EMPTY:-1}"
+      NODE_ENV: production
