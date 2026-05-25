@@ -1,4 +1,4 @@
-import { sql, type Kysely } from 'kysely';
+import { sql, type Kysely, type SqlBool } from 'kysely';
 import type { DB } from '../db/types';
 
 export interface CountryAggregate {
@@ -96,7 +96,7 @@ export class InsightsRepository {
       ]);
 
     if (filter.jobTitle !== undefined) {
-      q = q.where(sql`jobTitle = ${filter.jobTitle} COLLATE NOCASE`);
+      q = q.where(sql<SqlBool>`jobTitle = ${filter.jobTitle} COLLATE NOCASE`);
     }
 
     return q;
