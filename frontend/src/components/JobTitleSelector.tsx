@@ -43,7 +43,8 @@ export function JobTitleSelector({ country, value, onChange }: JobTitleSelectorP
     );
   }
 
-  const options = [ALL_ROLES, ...titles];
+  const baseOptions = [ALL_ROLES, ...titles];
+  const options = value !== null && !baseOptions.includes(value) ? [...baseOptions, value] : baseOptions;
   const selected = value ?? ALL_ROLES;
 
   return (
