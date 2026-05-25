@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { InsightsCard } from './InsightsCard';
 import * as countryHook from '../hooks/useCountryInsights';
 import * as roleHook from '../hooks/useRoleInsights';
@@ -33,12 +33,30 @@ describe('InsightsCard', () => {
     roleSpy.mockRestore();
   });
 
-  test('renders skeletons while the country is still loading', () => {
+  test('renders nothing during the first 200ms of loading (avoids a flash for fast responses)', () => {
     countrySpy.mockReturnValue({ result: null, isLoading: true, error: null });
     roleSpy.mockReturnValue({ result: null, isLoading: false, error: null });
     const { container } = render(<InsightsCard country="IN" role={null} />);
 
-    expect(container.querySelectorAll('.MuiSkeleton-root').length).toBeGreaterThan(0);
+    expect(container.firstChild).toBeNull();
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+  });
+
+  test('shows a centered spinner once the loading indicator delay elapses', () => {
+    jest.useFakeTimers();
+    try {
+      countrySpy.mockReturnValue({ result: null, isLoading: true, error: null });
+      roleSpy.mockReturnValue({ result: null, isLoading: false, error: null });
+      render(<InsightsCard country="IN" role={null} />);
+
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+
+      act(() => { jest.advanceTimersByTime(250); });
+
+      expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   test('renders an error alert when the country fetch fails', () => {

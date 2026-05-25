@@ -1,10 +1,11 @@
 import {
-  Alert, Box, Card, CardContent, Grid, Skeleton, Stack, Table, TableBody, TableCell,
-  TableHead, TableRow, Typography,
+  Alert, Box, Card, CardContent, CircularProgress, Grid, Skeleton, Stack, Table, TableBody,
+  TableCell, TableHead, TableRow, Typography,
 } from '@mui/material';
 import { COUNTRIES, type CountryInsightsResponse, type RoleInsightsResponse } from '@app/shared';
 import { useCountryInsights } from '../hooks/useCountryInsights';
 import { useRoleInsights } from '../hooks/useRoleInsights';
+import { useDelayedFlag } from '../hooks/useDelayedFlag';
 import { formatSalary } from '../lib/formatSalary';
 import { SalaryRangeBar } from './SalaryRangeBar';
 
@@ -16,13 +17,19 @@ interface InsightsCardProps {
 export function InsightsCard({ country, role }: InsightsCardProps) {
   const countryQuery = useCountryInsights(country);
   const roleQuery = useRoleInsights(country, role);
+  const countryStillLoading = countryQuery.isLoading || countryQuery.result === null;
+  const showCountrySpinner = useDelayedFlag(countryStillLoading, 200);
 
   if (countryQuery.error) {
     return <Alert severity="error">{countryQuery.error}</Alert>;
   }
 
-  if (countryQuery.isLoading || countryQuery.result === null) {
-    return <InsightsSkeleton />;
+  if (countryStillLoading) {
+    return showCountrySpinner ? (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
+        <CircularProgress />
+      </Box>
+    ) : null;
   }
 
   if (countryQuery.result.kind === 'empty') {
@@ -228,40 +235,6 @@ function DepartmentsCard({ data }: { data: CountryInsightsResponse }) {
         </Box>
       </CardContent>
     </Card>
-  );
-}
-
-function InsightsSkeleton() {
-  return (
-    <Stack spacing={3}>
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={6}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Skeleton variant="text" width="40%" />
-              <Skeleton variant="text" width="60%" height={40} />
-              <Skeleton variant="text" width="50%" />
-            </CardContent>
-          </Card>
-        </Grid>
-        {[0, 1, 2].map((i) => (
-          <Grid item xs={12} sm={4} md={2} key={i}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
-                <Skeleton variant="text" width="80%" />
-                <Skeleton variant="text" width="60%" height={32} />
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-      <Card>
-        <CardContent>
-          <Skeleton variant="text" width="20%" />
-          <Skeleton variant="rectangular" height={120} sx={{ mt: 1 }} />
-        </CardContent>
-      </Card>
-    </Stack>
   );
 }
 
