@@ -21,7 +21,7 @@ Companion to the [PRD](./prd.md). The PRD owns *what* we are building and *why*.
 | Form handling | `react-hook-form` + Zod | Shared schema between client and server. |
 | Frontend tests | Jest + React Testing Library | Same runner as backend. |
 | Container | Multi-stage Dockerfile | Single artifact, backend serves the static frontend. |
-| Hosting | Render | Free web service + persistent disk for SQLite. |
+| Hosting | Render | Free web service (Docker env). SQLite is ephemeral on free tier; `SEED_ON_EMPTY=1` rehydrates 10k rows on cold start. Starter + persistent disk is the documented upgrade path (see §11). |
 
 See [decisions.md](./decisions.md) for the calls behind these choices.
 
@@ -95,7 +95,7 @@ salary-management-system/
 └─────────────────────────────────────────────────────────────┘
 ```
 
-One process. One container. One database file on a mounted volume.
+One process. One container. One database file on the container's writable filesystem — ephemeral on Render free tier and on local Docker. Mountable as a real volume in a Starter-plan deploy by adding a `disk:` block to `render.yaml`; no code change required.
 
 ### Component boundaries
 
@@ -318,16 +318,22 @@ TDD. Each backend layer is tested in isolation by mocking the layer below it; re
 **Local dev:**
 - `npm run dev` at root → backend on `:3000` (`ts-node-dev`), Vite dev server on `:5173` with a proxy to `/api`.
 
+**Local prod-image run:**
+- `docker compose up` runs the same image Render serves, on `:3000`. `SEED_ON_EMPTY=1` by default; `SEED_ON_EMPTY=0 docker compose up` for empty-state UX. Data is ephemeral; `docker compose down && docker compose up` resets and re-seeds.
+
 **Docker build (multi-stage):**
 1. **builder:** `npm ci`; build `shared/`, `frontend/` (Vite), `backend/` (`tsc`).
 2. **runtime:** copy `backend/dist`, `frontend/dist`, `backend/migrations/`, minimal `node_modules` (including the prebuilt `better-sqlite3` native binary). `CMD ["node", "backend/dist/server.js"]`.
 
 **Container start:**
 1. Open the SQLite file; the app's `migrate()` runner applies any pending `migrations/*.sql` files inside a transaction.
+1b. If `SEED_ON_EMPTY=1` and the `employees` table is empty, the in-process seed inserts 10k rows.
 2. Start Express on `:3000`.
 3. Express serves `/api/*` from routes and everything else from `frontend/dist` with SPA fallback.
 
-**Hosting:** Render web service + 1 GB persistent disk mounted at `/data`. `DATABASE_PATH=/data/app.db`.
+**Hosting:** Render web service, `env: docker`, free tier, no persistent disk. The container's filesystem is ephemeral; data added through the UI is lost on cold start (Render free spins down after ~15 min idle), and the seed-on-empty hook restores 10k demo rows on the next request. Cold-start latency: ~20-25s (container boot + migrate + seed); warm requests <100ms.
+
+**Upgrade to real persistence:** add a `disk:` block to `render.yaml` (mount at `/data`, 1 GB) and bump the plan to `starter`. `DATABASE_PATH=/data/app.db` already points at the mount. No code change needed.
 
 ---
 

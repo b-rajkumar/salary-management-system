@@ -119,4 +119,25 @@ Shipped so far:
 
 Deliberately deferred:
 - **Column sort** — `?sortBy=...&sortDir=...` with per-column sort handles. Next slice. Whitelist: firstName, lastName, email, hireDate. (Salary sort is *permanently* excluded — see PRD §5 FR-2 — because raw cross-currency salary ordering is misleading.)
-- **Multi-stage Dockerfile + Render deploy.**
+
+## Deploy / run as a container
+
+A live deployment runs on Render free tier — URL added once the deploy lands.
+
+**Run locally with Docker:**
+
+```
+docker compose up
+# first run builds the image (~30s); subsequent runs start in ~10s
+# visit http://localhost:3000
+```
+
+The container seeds 10,000 employees on first boot. Data is ephemeral by design — matching the Render runtime — so `docker compose down && docker compose up` resets and re-seeds.
+
+To run the empty-state UI instead:
+
+```
+SEED_ON_EMPTY=0 docker compose up
+```
+
+**On Render:** the deploy uses the same image (`Dockerfile` + `render.yaml`). The free tier spins the container down after ~15 minutes of idle; the first request after a quiet period takes ~20-25 seconds (cold start + migrate + 10k-row seed). Subsequent requests are sub-100ms. See [`docs/engineering-design.md §11`](./docs/engineering-design.md) for the upgrade-to-persistent-disk path.
