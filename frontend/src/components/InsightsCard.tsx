@@ -17,14 +17,14 @@ interface InsightsCardProps {
 export function InsightsCard({ country, role }: InsightsCardProps) {
   const countryQuery = useCountryInsights(country);
   const roleQuery = useRoleInsights(country, role);
-  const countryStillLoading = countryQuery.isLoading || countryQuery.result === null;
-  const showCountrySpinner = useDelayedFlag(countryStillLoading, 200);
+  const isStillLoading = countryQuery.isLoading || countryQuery.result === null;
+  const showCountrySpinner = useDelayedFlag(isStillLoading, 200);
 
   if (countryQuery.error) {
     return <Alert severity="error">{countryQuery.error}</Alert>;
   }
 
-  if (countryStillLoading) {
+  if (countryQuery.isLoading || countryQuery.result === null) {
     return showCountrySpinner ? (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
         <CircularProgress />
