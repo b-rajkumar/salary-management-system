@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { z } from 'zod';
-import { employeeCreateSchema } from '@app/shared';
+import { bulkCreateEmployeesSchema, employeeCreateSchema, type BulkErrorItem } from '@app/shared';
 import { ValidationError } from '../lib/errors';
 import type { EmployeesService } from '../services/EmployeesService';
 
@@ -27,6 +27,31 @@ export class EmployeesController {
     const employee = await this.service.create(parsed.data);
 
     res.status(201).json(employee);
+  }
+
+  async createBulk(req: Request, res: Response): Promise<void> {
+    const parsed = bulkCreateEmployeesSchema.safeParse(req.body);
+
+    if (!parsed.success) {
+      const errors: BulkErrorItem[] = parsed.error.issues.map((issue) => {
+        const [, indexRaw, fieldRaw] = issue.path;
+
+        return {
+          index: typeof indexRaw === 'number' ? indexRaw : -1,
+          field: typeof fieldRaw === 'string' ? fieldRaw : '_row',
+          message: issue.message,
+        };
+      });
+
+      throw new ValidationError(
+        { errors },
+        `Import rejected: ${errors.length} validation errors`,
+      );
+    }
+
+    const result = await this.service.createBulk(parsed.data.employees);
+
+    res.status(201).json(result);
   }
 
   async list(req: Request, res: Response): Promise<void> {

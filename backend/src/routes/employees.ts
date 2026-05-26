@@ -12,6 +12,10 @@ export function employeesRouter(controller: EmployeesController): Router {
     controller.create(req, res).catch(next);
   });
 
+  r.post('/bulk', (req, res, next) => {
+    controller.createBulk(req, res).catch(next);
+  });
+
   r.put('/:id', (req, res, next) => {
     controller.update(req, res).catch(next);
   });

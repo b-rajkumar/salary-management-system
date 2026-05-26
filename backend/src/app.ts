@@ -30,6 +30,7 @@ export function buildApp(dbPath: string, frontendDist?: string): { app: Express;
 
   const app = express();
 
+  app.use('/api/employees/bulk', express.json({ limit: '3mb' }));
   app.use(express.json());
   app.get('/api/health', (_req, res) => {
     res.status(200).json({ ok: true });
@@ -51,4 +52,5 @@ export function buildApp(dbPath: string, frontendDist?: string): { app: Express;
   app.use(errorMiddleware);
 
   return { app, db };
+  
 }

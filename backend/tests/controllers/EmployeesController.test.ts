@@ -3,7 +3,7 @@ import request from 'supertest';
 import { EmployeesController } from '../../src/controllers/EmployeesController';
 import { employeesRouter } from '../../src/routes/employees';
 import { errorMiddleware } from '../../src/lib/errorMiddleware';
-import { ConflictError, NotFoundError } from '../../src/lib/errors';
+import { ConflictError, InFileDuplicateEmailError, NotFoundError } from '../../src/lib/errors';
 import type { EmployeesService } from '../../src/services/EmployeesService';
 
 const validBody = {
@@ -258,5 +258,114 @@ describe('DELETE /api/employees/:id', () => {
 
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe('EMPLOYEE_NOT_FOUND');
+  });
+});
+
+describe('POST /api/employees/bulk', () => {
+  let service: {
+    create: jest.Mock; list: jest.Mock; createBulk: jest.Mock;
+    update: jest.Mock; remove: jest.Mock;
+  };
+  let app: Express;
+
+  beforeEach(() => {
+    service = {
+      create: jest.fn(), list: jest.fn(),
+      createBulk: jest.fn().mockResolvedValue({ inserted: 3 }),
+      update: jest.fn(), remove: jest.fn(),
+    };
+    const controller = new EmployeesController(service as unknown as EmployeesService);
+
+    app = express();
+    app.use('/api/employees/bulk', express.json({ limit: '3mb' }));
+    app.use(express.json());
+    app.use('/api/employees', employeesRouter(controller));
+    app.use(errorMiddleware);
+  });
+
+  test('201 returns { inserted } and calls service.createBulk with the parsed body', async () => {
+    const body = {
+      employees: [
+        validBody,
+        { ...validBody, email: 'b@x.com' },
+        { ...validBody, email: 'c@x.com' },
+      ],
+    };
+    const res = await request(app).post('/api/employees/bulk').send(body);
+
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual({ inserted: 3 });
+    expect(service.createBulk).toHaveBeenCalledWith(body.employees);
+  });
+
+  test('400 when body has no `employees` key', async () => {
+    const res = await request(app).post('/api/employees/bulk').send({});
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(service.createBulk).not.toHaveBeenCalled();
+  });
+
+  test('400 when `employees` array is empty', async () => {
+    const res = await request(app).post('/api/employees/bulk').send({ employees: [] });
+
+    expect(res.status).toBe(400);
+    expect(service.createBulk).not.toHaveBeenCalled();
+  });
+
+  test('400 when `employees` array has more than 500 rows', async () => {
+    const employees = Array.from({ length: 501 }, (_, i) => ({ ...validBody, email: `u${i}@x.com` }));
+    const res = await request(app).post('/api/employees/bulk').send({ employees });
+
+    expect(res.status).toBe(400);
+    expect(service.createBulk).not.toHaveBeenCalled();
+  });
+
+  test('400 with per-row Zod errors when one row is malformed', async () => {
+    const body = {
+      employees: [
+        validBody,
+        { ...validBody, email: 'not-an-email' },
+        { ...validBody, salary: -1 },
+      ],
+    };
+    const res = await request(app).post('/api/employees/bulk').send(body);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error.details.errors).toEqual(expect.arrayContaining([
+      expect.objectContaining({ index: 1, field: 'email' }),
+      expect.objectContaining({ index: 2, field: 'salary' }),
+    ]));
+    expect(service.createBulk).not.toHaveBeenCalled();
+  });
+
+  test('maps service InFileDuplicateEmailError to 400 with details.errors echoed', async () => {
+    service.createBulk.mockRejectedValueOnce(
+      new InFileDuplicateEmailError(
+        { errors: [{ index: 0, field: 'email', message: 'Duplicate within file: a@x.com' }] },
+        'Import rejected: 2 rows share an email with another row in the file',
+      ),
+    );
+
+    const res = await request(app).post('/api/employees/bulk').send({ employees: [validBody, validBody] });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('IN_FILE_DUPLICATE_EMAIL');
+    expect(res.body.error.details.errors).toHaveLength(1);
+  });
+
+  test('maps service ConflictError("EMAIL_TAKEN") with details to 409', async () => {
+    service.createBulk.mockRejectedValueOnce(
+      new ConflictError('EMAIL_TAKEN', 'msg', {
+        errors: [{ index: 0, field: 'email', message: 'Email already exists: a@x.com' }],
+      }),
+    );
+
+    const res = await request(app).post('/api/employees/bulk').send({ employees: [validBody] });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('EMAIL_TAKEN');
+    expect(res.body.error.details.errors).toHaveLength(1);
   });
 });
