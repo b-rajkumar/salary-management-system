@@ -64,6 +64,17 @@ describe('POST /api/employees', () => {
     expect(res.status).toBe(409);
     expect(res.body.error).toMatchObject({ code: 'EMAIL_TAKEN', message: 'Email already in use' });
   });
+
+  test('lowercases email at the validation boundary so case variants reach the service in canonical form', async () => {
+    const res = await request(app)
+      .post('/api/employees')
+      .send({ ...validBody, email: 'ASHA@Example.COM' });
+
+    expect(res.status).toBe(201);
+    expect(service.create).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'asha@example.com' }),
+    );
+  });
 });
 
 describe('GET /api/employees', () => {

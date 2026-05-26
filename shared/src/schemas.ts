@@ -8,7 +8,7 @@ const todayISO = (): string => new Date().toISOString().slice(0, 10);
 export const employeeCreateSchema = z.object({
   firstName:  z.string().trim().min(1, 'Required').max(100),
   lastName:   z.string().trim().min(1, 'Required').max(100),
-  email:      z.string().trim().email('Must be a valid email').max(254),
+  email:      z.string().trim().toLowerCase().email('Must be a valid email').max(254),
   jobTitle:   z.string().trim().min(1, 'Required').max(100),
   department: z.string().trim().min(1, 'Required').max(100),
   country:    z.enum(countryCodes, { errorMap: () => ({ message: 'Select a country' }) }),
