@@ -56,3 +56,17 @@ export interface RoleInsightsResponse {
     newHiresLast12Months: number;
   };
 }
+
+export interface BulkCreateEmployeesRequest {
+  employees: EmployeeCreateInput[];
+}
+
+export interface BulkCreateEmployeesResponse {
+  inserted: number;
+}
+
+export interface BulkErrorItem {
+  index: number;
+  field: string;
+  message: string;
+}

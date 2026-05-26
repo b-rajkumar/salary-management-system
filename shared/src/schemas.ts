@@ -21,3 +21,7 @@ export const employeeCreateSchema = z.object({
 });
 
 export type EmployeeCreateInput = z.infer<typeof employeeCreateSchema>;
+
+export const bulkCreateEmployeesSchema = z.object({
+  employees: z.array(employeeCreateSchema).min(1).max(500),
+});
