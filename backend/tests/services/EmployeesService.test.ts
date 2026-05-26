@@ -1,5 +1,5 @@
 import { EmployeesService } from '../../src/services/EmployeesService';
-import { ConflictError, NotFoundError } from '../../src/lib/errors';
+import { ConflictError, InFileDuplicateEmailError, NotFoundError } from '../../src/lib/errors';
 import type { EmployeesRepository } from '../../src/repositories/EmployeesRepository';
 
 const input = {
@@ -97,5 +97,81 @@ describe('EmployeesService', () => {
       constructor: NotFoundError,
       code: 'EMPLOYEE_NOT_FOUND',
     });
+  });
+});
+
+describe('EmployeesService.createBulk', () => {
+  let repo: {
+    insert: jest.Mock; list: jest.Mock; update: jest.Mock; delete: jest.Mock;
+    findExistingEmails: jest.Mock; insertMany: jest.Mock;
+  };
+  let service: EmployeesService;
+
+  beforeEach(() => {
+    repo = {
+      insert: jest.fn(), list: jest.fn(), update: jest.fn(), delete: jest.fn(),
+      findExistingEmails: jest.fn().mockResolvedValue([]),
+      insertMany: jest.fn().mockResolvedValue(0),
+    };
+    service = new EmployeesService(repo as unknown as EmployeesRepository);
+  });
+
+  test('happy path returns { inserted: <count> } and calls insertMany once', async () => {
+    repo.insertMany.mockResolvedValue(3);
+
+    const inputs = [
+      { ...input, email: 'a@x.com' },
+      { ...input, email: 'b@x.com' },
+      { ...input, email: 'c@x.com' },
+    ];
+    const result = await service.createBulk(inputs);
+
+    expect(result).toEqual({ inserted: 3 });
+    expect(repo.findExistingEmails).toHaveBeenCalledWith(['a@x.com', 'b@x.com', 'c@x.com']);
+    expect(repo.insertMany).toHaveBeenCalledTimes(1);
+  });
+
+  test('throws InFileDuplicateEmailError flagging every participating row when two rows share an email', async () => {
+    const inputs = [
+      { ...input, email: 'a@x.com' },
+      { ...input, email: 'b@x.com', firstName: 'B' },
+      { ...input, email: 'a@x.com', firstName: 'A2' },
+    ];
+
+    await expect(service.createBulk(inputs)).rejects.toMatchObject({
+      constructor: InFileDuplicateEmailError,
+      code: 'IN_FILE_DUPLICATE_EMAIL',
+      status: 400,
+      details: {
+        errors: expect.arrayContaining([
+          expect.objectContaining({ index: 0, field: 'email' }),
+          expect.objectContaining({ index: 2, field: 'email' }),
+        ]),
+      },
+    });
+
+    expect(repo.findExistingEmails).not.toHaveBeenCalled();
+    expect(repo.insertMany).not.toHaveBeenCalled();
+  });
+
+  test('throws ConflictError("EMAIL_TAKEN") flagging every colliding row when DB has matches', async () => {
+    repo.findExistingEmails.mockResolvedValue(['b@x.com']);
+
+    const inputs = [
+      { ...input, email: 'a@x.com' },
+      { ...input, email: 'b@x.com' },
+      { ...input, email: 'c@x.com' },
+    ];
+
+    await expect(service.createBulk(inputs)).rejects.toMatchObject({
+      constructor: ConflictError,
+      code: 'EMAIL_TAKEN',
+      status: 409,
+      details: {
+        errors: [expect.objectContaining({ index: 1, field: 'email' })],
+      },
+    });
+
+    expect(repo.insertMany).not.toHaveBeenCalled();
   });
 });
