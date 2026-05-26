@@ -60,7 +60,6 @@ The PRD is deliberately trimmed. Do not add:
 - Salary history, compensation change tracking.
 - FX conversion, exchange-rate lookups, or a `currency` column on `employees` — currency is derived from `country` via `shared/countries.ts`, not stored per row.
 - Departments or job titles as separate normalized tables. (Countries already have a reference map in `shared/`; do not promote it into a SQL table.)
-- Bulk import/export endpoints.
 - Metrics beyond the two specified in the PRD.
 - Feature flags, environment toggles for features not requested.
 - Error fallbacks or validation for scenarios that can't happen (internal callers trust internal callers).

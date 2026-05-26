@@ -30,6 +30,9 @@ The HR Manager today lacks a single tool to keep employee records current and to
   - **Country view:** salary distribution (min, max, mean), total headcount, average tenure, hires in the last 12 months, and a per-department breakdown (headcount + average salary) for the selected country.
   - **Role-in-country view:** the same salary distribution and headcount/tenure shape, filtered to a specific job title within the selected country. The job-title picker offers only titles that exist in the chosen country's data.
 - A seed mechanism that populates the system with 10,000 realistic employee records so the tool can be evaluated at scale.
+- Bulk-import employees from a CSV file:
+  - Up to 500 employees per upload.
+  - All-or-nothing: either every row lands or none do; HR sees per-row errors and re-uploads.
 
 ### Out of scope (deliberate)
 - Authentication, authorization, and user management.
@@ -37,7 +40,7 @@ The HR Manager today lacks a single tool to keep employee records current and to
 - Salary history or compensation change tracking over time.
 - Soft delete, audit trail, or change history.
 - Manager / reporting hierarchy.
-- Bulk import/export (CSV, Excel) through the UI.
+- Bulk import via XLSX/Google Sheets, bulk export of any kind, bulk update, bulk delete.
 - Metrics beyond what FR-5 and FR-6 specify (e.g. salary history trends, cross-country salary comparison, salary bands / compa-ratios, gender or other demographic distributions).
 
 ## 5. Functional Requirements
@@ -80,6 +83,9 @@ On the same Insights page, the HR Manager narrows the country view to a specific
 - **Visual range bar:** a small horizontal bar from min to max with a marker at mean, rendering distribution shape without a chart library.
 
 Changing the country resets the role to "All roles" and the page falls back to the FR-5 country view. If no employees hold the picked title in the selected country (a race after a delete), the system shows an inline empty state — not an error alert.
+
+### FR-7 — Bulk import employees from CSV
+The HR Manager can import up to 500 employees in a single CSV upload via an **Import CSV** dialog on the Employees page. The dialog offers a downloadable template with the exact header row and field format the system accepts. The upload is **all-or-nothing**: a single bad row blocks the whole batch, so HR can fix the file and re-upload knowing nothing partial landed. Per-row errors are listed in an in-dialog table (row number, field, message) covering both format failures the frontend catches before any upload (invalid email, unknown country, negative salary, future hire date) and duplicate-email failures the backend catches against the existing database. Duplicate detection is case-insensitive both within the file and against the DB. A successful import shows "Imported {N} employees" and the new rows appear on page 1 of the grid.
 
 ## 6. Non-Functional Requirements
 

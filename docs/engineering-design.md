@@ -152,6 +152,7 @@ REST under `/api`. All responses JSON. Validation via Zod at every input boundar
 | POST   | `/api/employees`      | Create |
 | PUT    | `/api/employees/:id`  | Update (full) |
 | DELETE | `/api/employees/:id`  | Delete |
+| POST   | `/api/employees/bulk` | Bulk create up to 500 employees, all-or-nothing (FR-7) |
 
 **`GET /api/employees` query params:**
 - `page` (default 0), `pageSize` (default 50, max 200)
@@ -165,6 +166,8 @@ REST under `/api`. All responses JSON. Validation via Zod at every input boundar
 **`PUT /api/employees/:id`** — same body as `POST /api/employees`. Returns the updated row (`200 Employee`). Validation errors → `400`; unknown id → `404 EMPLOYEE_NOT_FOUND`; email collision with another row → `409 EMAIL_TAKEN`. `updatedAt` is set server-side at the repository layer (`new Date().toISOString()`) on every update; the value in the request body, if any, is ignored.
 
 **`DELETE /api/employees/:id`** — no body. Returns `204 No Content` on success. Validation errors on the `:id` param → `400`; unknown id → `404 EMPLOYEE_NOT_FOUND`. No cascade or referential-integrity concerns — `employees` is the only table.
+
+**`POST /api/employees/bulk`** — body `{ employees: EmployeeCreateInput[] }`, length 1–500. Validated by `bulkCreateEmployeesSchema` (wraps the single-create schema) under a route-scoped 3 MB JSON body limit (the global limit stays at the default for every other route). Four layers of checks, each short-circuiting on failure: (A) Zod shape + per-row format → `400 VALIDATION_ERROR`; (B) in-file duplicate emails, case-insensitive, every participating row flagged → `400 IN_FILE_DUPLICATE_EMAIL`; (C) in-DB duplicate emails, one indexed `SELECT email WHERE email IN (?,…)` against the unique index, all colliding rows flagged → `409 EMAIL_TAKEN`; (D) one multi-row `INSERT` — implicitly atomic in SQLite, so a constraint violation rolls back the whole statement. Success: `201 { inserted: <count> }`. Error envelope reuses the existing `{ error: { code, message, details? } }` shape with `details.errors: { index, field, message }[]` carrying per-row failures.
 
 ### Insights
 
