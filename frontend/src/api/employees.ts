@@ -1,4 +1,5 @@
 import type {
+  BulkCreateEmployeesRequest, BulkCreateEmployeesResponse,
   Employee, EmployeeCreateInput, EmployeesListResponse, EmployeeUpdateInput,
 } from '@app/shared';
 import { request } from './client';
@@ -7,6 +8,15 @@ export function createEmployee(input: EmployeeCreateInput): Promise<Employee> {
   return request<Employee>('/api/employees', {
     method: 'POST',
     body: JSON.stringify(input),
+  });
+}
+
+export function bulkCreateEmployees(
+  payload: BulkCreateEmployeesRequest,
+): Promise<BulkCreateEmployeesResponse> {
+  return request<BulkCreateEmployeesResponse>('/api/employees/bulk', {
+    method: 'POST',
+    body: JSON.stringify(payload),
   });
 }
 
