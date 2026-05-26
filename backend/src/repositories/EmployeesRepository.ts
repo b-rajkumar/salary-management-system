@@ -50,6 +50,20 @@ export class EmployeesRepository {
     }
   }
 
+  async findExistingEmails(emails: string[]): Promise<string[]> {
+    if (emails.length === 0) {
+      return [];
+    }
+
+    const rows = await this.db
+      .selectFrom('employees')
+      .select('email')
+      .where('email', 'in', emails)
+      .execute();
+
+    return rows.map((r) => r.email);
+  }
+
   async list(args: { page: number; pageSize: number; q?: string }): Promise<EmployeesListResponse> {
     const q = args.q?.trim();
 

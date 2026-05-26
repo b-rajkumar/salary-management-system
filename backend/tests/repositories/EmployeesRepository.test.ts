@@ -296,3 +296,35 @@ describe('EmployeesRepository', () => {
     });
   });
 });
+
+describe('EmployeesRepository.findExistingEmails', () => {
+  let repo: EmployeesRepository;
+
+  beforeEach(() => {
+    const sqlite = new Database(':memory:');
+
+    migrate(sqlite, path.join(__dirname, '..', '..', 'migrations'));
+    const kysely = new Kysely<DB>({ dialect: new SqliteDialect({ database: sqlite }) });
+
+    repo = new EmployeesRepository(kysely);
+  });
+
+  test('returns [] when given an empty input', async () => {
+    expect(await repo.findExistingEmails([])).toEqual([]);
+  });
+
+  test('returns [] when none of the input emails exist', async () => {
+    await repo.insert({ ...input, email: 'asha@example.com' });
+
+    expect(await repo.findExistingEmails(['bob@x.com', 'carol@x.com'])).toEqual([]);
+  });
+
+  test('returns only the subset of input emails that exist in the DB', async () => {
+    await repo.insert({ ...input, email: 'asha@example.com' });
+    await repo.insert({ ...input, email: 'bob@example.com', firstName: 'Bob' });
+
+    const result = await repo.findExistingEmails(['asha@example.com', 'carol@x.com', 'bob@example.com']);
+
+    expect(result.sort()).toEqual(['asha@example.com', 'bob@example.com']);
+  });
+});
