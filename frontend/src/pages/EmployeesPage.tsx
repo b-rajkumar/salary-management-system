@@ -3,6 +3,7 @@ import { Stack, Typography, Button, Alert, Box, TextField, Snackbar, CircularPro
 import { DataGrid, type GridColDef } from '@mui/x-data-grid';
 import { COUNTRIES, type Employee } from '@app/shared';
 import { EmployeeDialog } from '../components/EmployeeDialog';
+import { ImportEmployeesModal } from '../components/ImportEmployeesModal';
 import { RowActions } from '../components/RowActions';
 import { DeleteConfirmDialog } from '../components/DeleteConfirmDialog';
 import { SalaryCell } from '../components/SalaryCell';
@@ -23,6 +24,7 @@ type DialogState =
 
 export function EmployeesPage() {
   const [dialogState, setDialogState] = useState<DialogState>(null);
+  const [importOpen, setImportOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [status, setStatus] = useState<Status | null>(null);
@@ -116,6 +118,9 @@ export function EmployeesPage() {
           <Button variant="contained" onClick={() => setDialogState({ intent: 'create' })}>
             Add Employee
           </Button>
+          <Button variant="outlined" onClick={() => setImportOpen(true)}>
+            Import CSV
+          </Button>
         </Stack>
       )}
 
@@ -127,9 +132,14 @@ export function EmployeesPage() {
           <Typography variant="body2" color="text.secondary">
             Add your first employee to get started.
           </Typography>
-          <Button variant="contained" onClick={() => setDialogState({ intent: 'create' })}>
-            Add Employee
-          </Button>
+          <Stack direction="row" spacing={2}>
+            <Button variant="contained" onClick={() => setDialogState({ intent: 'create' })}>
+              Add Employee
+            </Button>
+            <Button variant="outlined" onClick={() => setImportOpen(true)}>
+              Import CSV
+            </Button>
+          </Stack>
         </Stack>
       )}
 
@@ -195,6 +205,16 @@ export function EmployeesPage() {
           onDelete={(e) => setDeleteTarget(e)}
         />
       )}
+
+      <ImportEmployeesModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={(count) => {
+          setStatus({ severity: 'success', message: `Imported ${count} employees` });
+          setPage(0);
+          refresh();
+        }}
+      />
 
       <DeleteConfirmDialog
         open={Boolean(deleteTarget)}
