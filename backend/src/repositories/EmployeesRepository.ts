@@ -64,6 +64,26 @@ export class EmployeesRepository {
     return rows.map((r) => r.email);
   }
 
+  async insertMany(inputs: EmployeeCreateInput[]): Promise<number> {
+    if (inputs.length === 0) {
+      return 0;
+    }
+
+    try {
+      const result = await this.db
+        .insertInto('employees')
+        .values(inputs)
+        .executeTakeFirst();
+
+      return Number(result?.numInsertedOrUpdatedRows ?? 0);
+    } catch (err) {
+      if (isUniqueEmailViolation(err)) {
+        throw new ConflictError('EMAIL_TAKEN', 'Email already in use');
+      }
+      throw err;
+    }
+  }
+
   async list(args: { page: number; pageSize: number; q?: string }): Promise<EmployeesListResponse> {
     const q = args.q?.trim();
 

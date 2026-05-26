@@ -328,3 +328,45 @@ describe('EmployeesRepository.findExistingEmails', () => {
     expect(result.sort()).toEqual(['asha@example.com', 'bob@example.com']);
   });
 });
+
+describe('EmployeesRepository.insertMany', () => {
+  let repo: EmployeesRepository;
+
+  beforeEach(() => {
+    const sqlite = new Database(':memory:');
+
+    migrate(sqlite, path.join(__dirname, '..', '..', 'migrations'));
+    const kysely = new Kysely<DB>({ dialect: new SqliteDialect({ database: sqlite }) });
+
+    repo = new EmployeesRepository(kysely);
+  });
+
+  test('inserts every row and returns the count', async () => {
+    const rows = [
+      { ...input, email: 'a@x.com' },
+      { ...input, email: 'b@x.com', firstName: 'Bob' },
+      { ...input, email: 'c@x.com', firstName: 'Carol' },
+    ];
+
+    const inserted = await repo.insertMany(rows);
+
+    expect(inserted).toBe(3);
+    expect(await repo.findExistingEmails(['a@x.com', 'b@x.com', 'c@x.com'])).toHaveLength(3);
+  });
+
+  test('throws ConflictError("EMAIL_TAKEN") and inserts nothing when one row violates the unique constraint', async () => {
+    await repo.insert({ ...input, email: 'a@x.com' });
+
+    const rows = [
+      { ...input, email: 'b@x.com', firstName: 'Bob' },
+      { ...input, email: 'a@x.com', firstName: 'Bad' },
+      { ...input, email: 'c@x.com', firstName: 'Carol' },
+    ];
+
+    await expect(repo.insertMany(rows)).rejects.toMatchObject({
+      constructor: ConflictError,
+      code: 'EMAIL_TAKEN',
+    });
+    expect(await repo.findExistingEmails(['b@x.com', 'c@x.com'])).toEqual([]);
+  });
+});
